@@ -5,7 +5,6 @@ import argparse
 # https://github.com/opencv/opencv/tree/4.x/samples/python/tutorial_code/video/background_subtraction
 # https://stackoverflow.com/questions/66876520/how-to-extract-foreground-form-a-moving-camera-by-using-opencv
 # https://ietresearch.onlinelibrary.wiley.com/doi/full/10.1049/iet-cvi.2017.0187
-# https://github.com/BGU-CS-VIL/JA-POLS
 parser = argparse.ArgumentParser(description='This program shows how to use background subtraction methods provided by \
                                               OpenCV. You can process both videos and images.')
 parser.add_argument('--input', type=str, help='Path to a video or a sequence of image.', default='vtest.avi')
@@ -20,10 +19,9 @@ else:
     backSub = cv.createBackgroundSubtractorKNN()
 ## [create]
 backSub = cv.createBackgroundSubtractorKNN()
-cv.cr
 
 ## [capture]
-capture = cv.VideoCapture("video/background_subtraction_1.mp4")
+capture = cv.VideoCapture("video/SAL.mp4")
 if not capture.isOpened():
     print('Unable to open: ' + args.input)
     exit(0)
@@ -33,7 +31,6 @@ while True:
     ret, frame = capture.read()
     if frame is None:
         break
-
     ## [apply]
     #update the background model
     fgMask = backSub.apply(frame)
@@ -49,9 +46,17 @@ while True:
 
     ## [show]
     #show the current frame and the fg masks
-    cv.imshow('Frame', frame)
-    # cv.imshow('Background only', bgMask)
-    cv.imshow('FG Mask', fgMask)
+    nRow, nCol = fgMask.shape
+    # for r in range(nRow):
+    #     for c in range(nCol):
+    #         if fgMask[r][c] == 0:
+    #             frame[r][c] = [0,0,0]
+    fg = cv.bitwise_or(frame, frame, mask=fgMask)
+
+    # cv.imshow('Frame', frame)
+    # cv.imshow('FG Mask', fgMask)
+    cv.imshow('fg', fg)
+    
     ## [show]   
 
     keyboard = cv.waitKey(30)
