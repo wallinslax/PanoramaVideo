@@ -52,6 +52,8 @@ def mp4toRGGB():
 
 
 if __name__ == '__main__':
+    if not os.path.exists(os.path.join(dirname,'../rgb')):
+        os.mkdir(os.path.join(dirname,'../rgb'))
     os.mkdir(os.path.join(dirname, '../rgb/'+videoname))
     mp4toRGGB()
     
