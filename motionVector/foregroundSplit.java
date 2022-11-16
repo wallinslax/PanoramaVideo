@@ -18,9 +18,9 @@ public class foregroundSplit {
 	JFrame frame;
 	GridBagLayout gLayout;
 	GridBagConstraints c;
-	BufferedImage[] inImgs, outImgs;
+	BufferedImage[] inImgs, foreImgs, backImgs, outImgs;
 	int nRow, nCol;
-	double[][][][] motionVectors;// frame, hieght, width, (dx,dy)
+	int[][][][] motionVectors;// frame, hieght, width, (dx,dy)
 	double[][][] motionVectorMADs;// frame, hieght, width, value
  
 	// imgPath,subSamplingY,subSamplingU,subSamplingV,Sw,Sh,A
@@ -32,21 +32,7 @@ public class foregroundSplit {
 		this.width = Integer.parseInt( parts[parts.length - 3] );
 		// getPaths
 		fFramesPath = getPaths(foreGroundDir);
-		// load input images
-		inImgs = new BufferedImage[fFramesPath.size()];
-		for(int i=0; i < fFramesPath.size(); i++){
-			inImgs[i] = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-			System.out.println(fFramesPath.get(i));
-			readImageRGB(fFramesPath.get(i),inImgs[i]);
-		}
-		// motion vectors of each macroblock per frame 
-		// there are nRow * nCol macroblocks
-		this.nRow = height/macroSize;
-		this.nCol = width/macroSize;
-		this.motionVectors = new double[nFrame][nRow][nCol][2];
-		this.motionVectorMADs = new double[nFrame][nRow][nCol];
-		outImgs = new BufferedImage[fFramesPath.size()];
-		
+
 		// display
 		frame = new JFrame();
 		gLayout = new GridBagLayout();
@@ -60,32 +46,77 @@ public class foregroundSplit {
 		c.fill = GridBagConstraints.HORIZONTAL;
 		c.gridx = 0;
 		c.gridy = 1;
+
+		// load input images
+		inImgs = new BufferedImage[fFramesPath.size()];
+		for(int i=0; i < fFramesPath.size(); i++){
+			inImgs[i] = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+			readImageRGB(fFramesPath.get(i),inImgs[i]);
+		}
+		// this.height = this.height/macroSize * macroSize;
+		// this.width = this.width/macroSize * macroSize;
+
+		// Motion Vectors of each macroblock per frame 
+		// there are nRow * nCol macroblocks
+		this.nRow = height/macroSize;
+		this.nCol = width/macroSize;
+		this.motionVectors = new int[nFrame][nRow][nCol][2];
+		this.motionVectorMADs = new double[nFrame][nRow][nCol];
+		// foreground background
+		foreImgs = new BufferedImage[fFramesPath.size()];
+		backImgs = new BufferedImage[fFramesPath.size()];
 		getMotionVectors();
+	
 	}
 
-	private void getMotionVectors(){
-		// showImg(Img1);
-		// showImg(Img2);
-		int k = macroSize;
-		for(int fIdx=1; fIdx<nFrame;fIdx++){
-			for(int r = 0; r < nRow; r++)
-				for(int c = 0; c < nCol; c++){
-					motionVectors[fIdx][r][c] = new double[] {0,0};
-					motionVectorMADs[fIdx][r][c] = inf;
-					double error = inf;
-					for(int vx= -k; vx<k; vx++)
-						for(int vy= -k; vy<k; vy++){
-							error = MAD(inImgs[fIdx],inImgs[fIdx-1],vx,vy,r,c);
-							if(error < motionVectorMADs[fIdx][r][c]){
-								motionVectorMADs[fIdx][r][c] = error;
-								motionVectors[fIdx][r][c] = new double[] {vx,vy};
-							}
-						}
-				}
-			System.out.println(Arrays.deepToString(motionVectors[fIdx]));
-		}
-		
+	private void getForegroundPerFrame(int fIdx){
+		// getForeground
+		foreImgs[fIdx] = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+		for(int y = 0; y < height; y++) // init foreImgs to all black
+			for(int x = 0; x < width; x++)
+				foreImgs[fIdx].setRGB(x, y,0);
+
+		for(int r = 0; r < nRow; r++)
+			for(int c = 0; c < nCol; c++){
+				int mv_x = motionVectors[fIdx][r][c][0];
+				int mv_y = motionVectors[fIdx][r][c][1];
+				int base_x = c*macroSize;
+				int base_y = r*macroSize;
+				if(mv_x != 0 || mv_y !=0) // motion vector is non zero if foreground XXXXXX
+					for(int y = 0; y < macroSize; y++)
+						for(int x = 0; x < macroSize; x++)
+							foreImgs[fIdx].setRGB(base_x + x, base_y + y, inImgs[fIdx].getRGB(base_x + x, base_y + y) );
+			}
+		showImg(foreImgs[fIdx]);
 	}
+	
+	private void getMotionVectors(){
+		for(int fIdx=1; fIdx<nFrame;fIdx++){
+			getMotionVectorsPerFrame(fIdx);
+			getForegroundPerFrame(fIdx);
+		}
+	}
+
+	private void getMotionVectorsPerFrame(int fIdx){
+		int k = macroSize;
+		for(int r = 0; r < nRow; r++)
+			for(int c = 0; c < nCol; c++){
+				motionVectors[fIdx][r][c] = new int[] {0,0};
+				motionVectorMADs[fIdx][r][c] = inf;
+				double error = inf;
+				for(int vec_x = -k; vec_x < k; vec_x++)
+					for(int vec_y = -k; vec_y < k; vec_y++){
+						error = MAD(inImgs[fIdx], inImgs[fIdx-1],vec_x,vec_y,r,c);
+						if(error < motionVectorMADs[fIdx][r][c]){
+							motionVectorMADs[fIdx][r][c] = error;
+							motionVectors[fIdx][r][c] = new int[] {vec_x,vec_y};
+						}
+					}
+			}
+		// System.out.println(Arrays.deepToString(motionVectors[fIdx]));
+	}
+
+	
 	
 	private double MAD(BufferedImage curImg,BufferedImage prvImg,int vec_x,int vec_y,int r,int c){ //mean absolute difference, textbook p.233
 		int base_x = c*macroSize;
@@ -128,7 +159,7 @@ public class foregroundSplit {
 			try{
 				RandomAccessFile raf = new RandomAccessFile(file, "r");
 				raf.seek(0);
-				int frameLength = width*height*3;
+				int frameLength = width * height * 3;
 				long len = frameLength;
 				byte[] bytes = new byte[(int) len];
 				raf.read(bytes);
@@ -198,8 +229,8 @@ public class foregroundSplit {
 	public static void main(String[] args) {	
 		String foreGroundDir;
 		if(args.length == 0)
-			// foreGroundDir = "C:\\video_rgb\\Stairs_490_270_346";
-			foreGroundDir = "C:\\video_rgb\\video2_240_424_383";
+			foreGroundDir = "C:\\video_rgb\\Stairs_490_270_346";
+			// foreGroundDir = "C:\\video_rgb\\video2_240_424_383";
 			// foreGroundDir = "C:\\hw2RGB\\subtraction\\background_subtraction_2_640_480_480";
 		else
 			foreGroundDir = args[0];
