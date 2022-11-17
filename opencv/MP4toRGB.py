@@ -51,7 +51,7 @@ def loadRGB(filedir):
     tmp = filedir.split("_")
     width, height, nFrame = int(tmp[-3]), int(tmp[-2]), int(tmp[-1])
     rgbNames = [f for f in listdir(args.filedir) if isfile(join(filedir, f))]
-    rgbNames = [rgbNames[0]]
+    # rgbNames = rgbNames[0:30] # smaller dataset
     frames = []
     for rgbName in tqdm(rgbNames):
         frame = np.zeros((height,width,3))
@@ -66,11 +66,6 @@ def loadRGB(filedir):
         frame = np.clip(frame,0,255).astype(np.uint8)
         frames.append(frame)
     return frames
-        
-        
-
-        # Do stuff with byte
-
 
 def saveFramesRGB(filename: str,frames):
     videoname = filename.split('/')[-1]
@@ -108,7 +103,7 @@ def getMotionVectorsPerFrame(curFrame, prvFrame):
     motionVectorsPerFrame = np.empty((nRow,nCol,2))
     motionVectorMADs = np.ones((nRow,nCol))* float('inf')
     for r in tqdm(range(nRow)):
-        for c in tqdm(range(nCol)):
+        for c in tqdm(range(nCol),leave=False):
             motionVectorsPerFrame[r][c] = [0,0]
             for vec_x in range(-k, k):
                 for vec_y in range(-k, k):
@@ -144,11 +139,17 @@ if __name__ == '__main__':
     parser.add_argument("-d", "--filedir", type=str, default="C:\\video_rgb\\SAL_490_270_437",help="specify rgb directory")
     args = parser.parse_args()
     
-    
     # inImgs = mp4toRGB(args.filepath)
     inImgs2 = loadRGB(args.filedir)
-    # motionVectors = getMotionVectors(inImgs)
+    # motionVectors = getMotionVectors(inImgs2)
 
-    print(inImgs2[-1])
-    sampleImg = numpy2pil(inImgs2[-1])
-    sampleImg.show()
+    # Debug View-----------------------------------
+    # sampleImg = numpy2pil(inImgs2[-1])
+    # sampleImg.show()
+    for inImg in inImgs2:
+        ## [show]
+        inImg = cv.cvtColor(inImg, cv.COLOR_RGB2BGR)
+        cv.imshow('Frame', inImg) # color wired HELP!!
+        keyboard = cv.waitKey(30)
+        if keyboard == 'q' or keyboard == 27:
+            break
