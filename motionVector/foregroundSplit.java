@@ -129,6 +129,9 @@ public class foregroundSplit {
 					System.out.println(base_x + x);
 				Color cur_c = new Color(curImg.getRGB(base_x + x, base_y + y));
 				Color prv_c = new Color(prvImg.getRGB(base_x + x + vec_x, base_y + y + vec_y));
+				int red = prv_c.getRed();
+				int gre = prv_c.getGreen();
+				int blu = prv_c.getBlue();
 				double cur_y = 0.299*cur_c.getRed() + 0.587*cur_c.getGreen() + 0.114*cur_c.getBlue();
 				double prv_y = 0.299*prv_c.getRed() + 0.587*prv_c.getGreen() + 0.114*prv_c.getBlue();
 				subError += Math.abs(prv_y-cur_y);

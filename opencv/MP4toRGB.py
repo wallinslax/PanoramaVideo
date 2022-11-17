@@ -50,14 +50,12 @@ def mp4toRGB(filename: str):
 def loadRGB(filedir):
     tmp = filedir.split("_")
     width, height, nFrame = int(tmp[-3]), int(tmp[-2]), int(tmp[-1])
-    frames = []
-    
     rgbNames = [f for f in listdir(args.filedir) if isfile(join(filedir, f))]
-    tmpFile = rgbNames[0]
+    rgbNames = [rgbNames[0]]
+    frames = []
     for rgbName in tqdm(rgbNames):
         frame = np.zeros((height,width,3))
         with open(join(filedir, rgbName), "rb") as f:
-            cIdx = 0 # 0:r, 1:g, 2:b
             for y in range(height):
                 for x in range(width):
                     r = int.from_bytes(f.read(1), "big")
@@ -65,6 +63,7 @@ def loadRGB(filedir):
                     b = int.from_bytes(f.read(1), "big")
                     frame[y][x] = [r,g,b]
         # print(frame)
+        frame = np.clip(frame,0,255).astype(np.uint8)
         frames.append(frame)
     return frames
         
@@ -147,9 +146,9 @@ if __name__ == '__main__':
     
     
     # inImgs = mp4toRGB(args.filepath)
-    inImgs = loadRGB(args.filedir)
+    inImgs2 = loadRGB(args.filedir)
     # motionVectors = getMotionVectors(inImgs)
 
-    print(inImgs[-1])
-    sampleImg = numpy2pil(inImgs[-1])
+    print(inImgs2[-1])
+    sampleImg = numpy2pil(inImgs2[-1])
     sampleImg.show()
