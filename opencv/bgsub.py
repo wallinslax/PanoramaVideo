@@ -7,7 +7,7 @@ import argparse
 # https://ietresearch.onlinelibrary.wiley.com/doi/full/10.1049/iet-cvi.2017.0187
 parser = argparse.ArgumentParser(description='This program shows how to use background subtraction methods provided by \
                                               OpenCV. You can process both videos and images.')
-parser.add_argument('--input', type=str, help='Path to a video or a sequence of image.', default='vtest.avi')
+parser.add_argument('--input', type=str, help='Path to a video or a sequence of image.', default='video/SAL.mp4')
 parser.add_argument('--algo', type=str, help='Background subtraction method (KNN, MOG2).', default='MOG2')
 args = parser.parse_args()
 
@@ -56,7 +56,6 @@ while True:
     # cv.imshow('Frame', frame)
     # cv.imshow('FG Mask', fgMask)
     cv.imshow('fg', fg)
-    
     ## [show]   
 
     keyboard = cv.waitKey(30)

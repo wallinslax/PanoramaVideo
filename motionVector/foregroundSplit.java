@@ -89,7 +89,7 @@ public class foregroundSplit {
 			}
 		showImg(foreImgs[fIdx]);
 	}
-	
+
 	private void getMotionVectors(){
 		for(int fIdx=1; fIdx<nFrame;fIdx++){
 			getMotionVectorsPerFrame(fIdx);
@@ -116,8 +116,6 @@ public class foregroundSplit {
 		// System.out.println(Arrays.deepToString(motionVectors[fIdx]));
 	}
 
-	
-	
 	private double MAD(BufferedImage curImg,BufferedImage prvImg,int vec_x,int vec_y,int r,int c){ //mean absolute difference, textbook p.233
 		int base_x = c*macroSize;
 		int base_y = r*macroSize;
