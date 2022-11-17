@@ -9,7 +9,7 @@ dirname = os.path.dirname(__file__)
 filename = os.path.join(dirname, '../video/'+videoname+'.mp4')
 frames = []
 
-def mp4toRGGB():
+def mp4toRGB():
     cap = cv2.VideoCapture(filename)
     count = 0
     while (cap.isOpened()):
@@ -55,7 +55,7 @@ if __name__ == '__main__':
     if not os.path.exists(os.path.join(dirname,'../rgb')):
         os.mkdir(os.path.join(dirname,'../rgb'))
     os.mkdir(os.path.join(dirname, '../rgb/'+videoname))
-    mp4toRGGB()
+    mp4toRGB()
     
     # print(frames[-1])
     # img = numpy2pil(frames[-1])
