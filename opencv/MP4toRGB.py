@@ -2,6 +2,8 @@ import cv2 as cv
 import numpy as np
 from PIL import Image
 import sys, os.path, argparse
+from os import listdir
+from os.path import isfile, join
 from tqdm import tqdm
 
 macroSize = 16
@@ -44,6 +46,32 @@ def mp4toRGB(filename: str):
 
     capture.release()
     return frames
+
+def loadRGB(filedir):
+    tmp = filedir.split("_")
+    width, height, nFrame = int(tmp[-3]), int(tmp[-2]), int(tmp[-1])
+    frames = []
+    
+    rgbNames = [f for f in listdir(args.filedir) if isfile(join(filedir, f))]
+    tmpFile = rgbNames[0]
+    for rgbName in tqdm(rgbNames):
+        frame = np.zeros((height,width,3))
+        with open(join(filedir, rgbName), "rb") as f:
+            cIdx = 0 # 0:r, 1:g, 2:b
+            for y in range(height):
+                for x in range(width):
+                    r = int.from_bytes(f.read(1), "big")
+                    g = int.from_bytes(f.read(1), "big")
+                    b = int.from_bytes(f.read(1), "big")
+                    frame[y][x] = [r,g,b]
+        # print(frame)
+        frames.append(frame)
+    return frames
+        
+        
+
+        # Do stuff with byte
+
 
 def saveFramesRGB(filename: str,frames):
     videoname = filename.split('/')[-1]
@@ -114,9 +142,13 @@ def MAD(curFrame, prvFrame, vec_x, vec_y, r, c):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--filepath", type=str, default="./video/SAL.mp4",help="specify video file name")
+    parser.add_argument("-d", "--filedir", type=str, default="C:\\video_rgb\\SAL_490_270_437",help="specify rgb directory")
     args = parser.parse_args()
-    inImgs = mp4toRGB(args.filepath)
-    motionVectors = getMotionVectors(inImgs)
+    
+    
+    # inImgs = mp4toRGB(args.filepath)
+    inImgs = loadRGB(args.filedir)
+    # motionVectors = getMotionVectors(inImgs)
 
     print(inImgs[-1])
     sampleImg = numpy2pil(inImgs[-1])

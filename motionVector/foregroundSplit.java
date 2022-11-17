@@ -227,7 +227,7 @@ public class foregroundSplit {
 	public static void main(String[] args) {	
 		String foreGroundDir;
 		if(args.length == 0)
-			foreGroundDir = "C:\\video_rgb\\Stairs_490_270_346";
+			foreGroundDir = "C:\\video_rgb\\SAL_490_270_437";
 			// foreGroundDir = "C:\\video_rgb\\video2_240_424_383";
 			// foreGroundDir = "C:\\hw2RGB\\subtraction\\background_subtraction_2_640_480_480";
 		else
