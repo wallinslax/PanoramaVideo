@@ -48,11 +48,20 @@ def mp4toRGB(filename: str):
     return frames
 
 def loadRGB(filedir):
+    frames = []
+    # File handle
+    videoName = filedir.split("\\")[-1].split("_")[0]
+    framesNPYName = "opencv/frames_"+ videoName +".npy"
+    if os.path.exists(framesNPYName):
+        with open(framesNPYName, 'rb') as f:
+            frames = np.load(f)
+        return frames
+    
     tmp = filedir.split("_")
     width, height, nFrame = int(tmp[-3]), int(tmp[-2]), int(tmp[-1])
     rgbNames = [f for f in listdir(args.filedir) if isfile(join(filedir, f))]
     # rgbNames = rgbNames[0:30] # smaller dataset
-    frames = []
+    
     for rgbName in tqdm(rgbNames):
         frame = np.zeros((height,width,3))
         with open(join(filedir, rgbName), "rb") as f:
@@ -65,6 +74,11 @@ def loadRGB(filedir):
         # print(frame)
         frame = np.clip(frame,0,255).astype(np.uint8)
         frames.append(frame)
+
+    # File handle
+    with open(framesNPYName, 'wb') as f:
+        np.save(f,frames)
+    
     return frames
 
 def saveFramesRGB(filename: str,frames):
@@ -90,10 +104,21 @@ def numpy2pil(np_array: np.ndarray) -> Image:
 
 def getMotionVectors(inImgs):
     motionVectors = []
-    for fIdx in range(1,len(inImgs)):
+    # File handle
+    motionVectorsFileName = "opencv/motionVectors.npy"
+    if os.path.exists(motionVectorsFileName):
+        with open(motionVectorsFileName, 'rb') as f:
+            motionVectors = np.load(f)
+        return motionVectors
+    
+    for fIdx in tqdm(range(1,len(inImgs))):
         curFrame, prvFrame = inImgs[fIdx], inImgs[fIdx - 1]
         motionVectorsPerFrame = getMotionVectorsPerFrame(curFrame, prvFrame)
         motionVectors.append(motionVectorsPerFrame)
+    # File handle
+    with open(motionVectorsFileName, 'wb') as f:
+        np.save(f,motionVectors)
+
     return motionVectors
 
 def getMotionVectorsPerFrame(curFrame, prvFrame):
@@ -103,7 +128,7 @@ def getMotionVectorsPerFrame(curFrame, prvFrame):
     motionVectorsPerFrame = np.empty((nRow,nCol,2))
     motionVectorMADs = np.ones((nRow,nCol))* float('inf')
     for r in tqdm(range(nRow)):
-        for c in tqdm(range(nCol),leave=False):
+        for c in range(nCol):
             motionVectorsPerFrame[r][c] = [0,0]
             for vec_x in range(-k, k):
                 for vec_y in range(-k, k):
@@ -112,18 +137,27 @@ def getMotionVectorsPerFrame(curFrame, prvFrame):
                         motionVectorMADs[r][c] = error
                         motionVectorsPerFrame[r][c] = [vec_x, vec_y]
 
-    print(motionVectorsPerFrame)
+    # print(motionVectorsPerFrame)
     return motionVectorsPerFrame
     
 def MAD(curFrame, prvFrame, vec_x, vec_y, r, c):
     height,width = curFrame.shape[0], curFrame.shape[1]
-    base_x, base_y = c * macroSize, r * macroSize
+    base_x, base_y = c * macroSize, r * macroSize # current macroblock start point
+    # early retrun when illegal previous macroblock
+    if base_x + vec_x < 0 or base_x + vec_x + macroSize >= width\
+    or base_y + vec_y < 0 or base_y + vec_y + macroSize >= height:
+        return float('inf')
+    curMB_RGB = curFrame[base_y:(base_y + macroSize), base_x:(base_x + macroSize)]
+    prvMB_RGB = prvFrame[(base_y + vec_y):(base_y + vec_y + macroSize), (base_x + vec_x):(base_x + vec_x + macroSize)]
+    curMB_Y = 0.299 * curMB_RGB[:,:,0] + 0.587 * curMB_RGB[:,:,1] + 0.114 * curMB_RGB[:,:,2]
+    prvMB_Y = 0.299 * prvMB_RGB[:,:,0] + 0.587 * prvMB_RGB[:,:,1] + 0.114 * prvMB_RGB[:,:,2]
+    subError = abs(np.subtract(curMB_Y,prvMB_Y)).sum()
+    return subError
+
     subError = 0
     for x in range(macroSize):
         for y in range(macroSize):
-            if base_x + x + vec_x < 0 or base_x + x + vec_x >= width\
-            or base_y + y + vec_y < 0 or base_y + y + vec_y >= height:
-                return float('inf')
+            
             if base_x + x >= width or base_y + y >= height:
                 print(base_x + x)
             cur_c = curFrame[base_y + y][base_x + x]
@@ -138,10 +172,10 @@ if __name__ == '__main__':
     parser.add_argument("-f", "--filepath", type=str, default="./video/SAL.mp4",help="specify video file name")
     parser.add_argument("-d", "--filedir", type=str, default="C:\\video_rgb\\SAL_490_270_437",help="specify rgb directory")
     args = parser.parse_args()
-    
+
     # inImgs = mp4toRGB(args.filepath)
     inImgs2 = loadRGB(args.filedir)
-    # motionVectors = getMotionVectors(inImgs2)
+    motionVectors = getMotionVectors(inImgs2)
 
     # Debug View-----------------------------------
     # sampleImg = numpy2pil(inImgs2[-1])
@@ -149,7 +183,7 @@ if __name__ == '__main__':
     for inImg in inImgs2:
         ## [show]
         inImg = cv.cvtColor(inImg, cv.COLOR_RGB2BGR)
-        cv.imshow('Frame', inImg) # color wired HELP!!
+        cv.imshow('Frame', inImg)
         keyboard = cv.waitKey(30)
         if keyboard == 'q' or keyboard == 27:
             break
