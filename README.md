@@ -12,3 +12,5 @@ The third application is to eliminate one of forgrounds from second application.
 
 ### Uasage Example
     java foregroundSplit.java "C:\\video_rgb\\Stairs_490_270_346"
+    python opencv/MP4toRGB.py -f video/Stairs.mp4
+    python opencv/MP4toRGB.py -d "C:\\video_rgb\\video2_240_424_383"
