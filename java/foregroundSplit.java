@@ -113,7 +113,7 @@ public class foregroundSplit {
 						}
 					}
 			}
-		// System.out.println(Arrays.deepToString(motionVectors[fIdx]));
+		System.out.println("fIdx="+Integer.toString(fIdx)+": \n" + Arrays.deepToString(motionVectors[fIdx]));
 	}
 
 	private double MAD(BufferedImage curImg,BufferedImage prvImg,int vec_x,int vec_y,int r,int c){ //mean absolute difference, textbook p.233

@@ -5,9 +5,8 @@ import sys
 from scipy import stats
 from tqdm import tqdm
 from sklearn.cluster import KMeans
-
-macroSize = 16
-
+from ioVideo import mp4toRGB, playVideo
+from collections import defaultdict
 
 # simplified loadRGB
 def loadRGB(filedir):
@@ -15,7 +14,7 @@ def loadRGB(filedir):
     # File handle
     # videoName = filedir.split("\\")[-1].split("_")[0]
     videoName = 'SAL'
-    framesNPYName = "opencv/frames_"+ videoName +".npy"
+    framesNPYName = "cache/frames_"+ videoName +".npy"
     if os.path.exists(framesNPYName):
         with open(framesNPYName, 'rb') as f:
             frames = np.load(f)
@@ -24,14 +23,14 @@ def loadRGB(filedir):
 def getMotionVectors(inImgs):
     motionVectors = []
     # File handle
-    motionVectorsFileName = "opencv/motionVectors.npy"
+    motionVectorsFileName = "cache/motionVectors_SAL_437small.npy"
     if os.path.exists(motionVectorsFileName):
         with open(motionVectorsFileName, 'rb') as f:
             motionVectors = np.load(f)
         return motionVectors
 
 # getForegroundMask, need to be merged with main
-def getForegroundMask(motionVectors, height, width, mode=1):
+def getForegroundMask(motionVectors, height, width, mode=1, macroSize=16):
     # mode:
     # 1= Mode
     # 2= K-Mean
@@ -91,18 +90,36 @@ def getForeAndBack(frames, fMasks):
 
     return fgs,bgs
 
+def getForeground_Naive(inImgs,motionVectors,macroSize):
+    nFrame, height, width, _ = np.shape(inImgs) 
+    nRow, nCol = height//macroSize, width//macroSize
+    foreImgs = []
+    for fIdx in range(1, len(motionVectors)+1):
+        curFrame = inImgs[fIdx][:]
+        motionVectorsPerFrame = motionVectors[fIdx-1]
+        motionDict = defaultdict(int)
+        for r in range(nRow):
+            for c in range(nCol):
+                motionDict[tuple(motionVectorsPerFrame[r][c])] += 1
 
-def playVideo(frames):
-    for frame in frames:
-        # to display with cv2 we need to convert to BGR first
-        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        cv2.imshow('rgb_frames',frame)
-        cv2.waitKey(25)
+        bgMotion_x, bgMotion_y = sorted(motionDict.items(), key=lambda x:x[1])[-1][0]
+
+        for r in range(nRow):
+            for c in range(nCol):
+                vec_x, vec_y = motionVectorsPerFrame[r][c]
+                delta = 2
+                if (bgMotion_x-delta) <= vec_x <= (bgMotion_x+delta) and (bgMotion_y-delta) <= vec_y <= (bgMotion_y+delta):
+                    base_x, base_y = c * macroSize, r * macroSize # current macroblock start point
+                    curFrame[base_y:(base_y + macroSize), base_x:(base_x + macroSize)] = 0 # black out the macroblock
+        foreImgs.append(curFrame)
+
+    return foreImgs
 
 if __name__ == '__main__':
     motionVectors = getMotionVectors(None)
     frames = loadRGB(None)
+    # frames = mp4toRGB("./video/SAL.mp4")
     framesCount, height, width, _ = np.shape(frames) 
-    fMasks = getForegroundMask(motionVectors, height, width,2)
+    fMasks = getForegroundMask(motionVectors, height, width,2, 16)
     fgs, bgs = getForeAndBack(frames, fMasks)
     playVideo(fgs)
