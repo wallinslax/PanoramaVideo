@@ -9,14 +9,12 @@ The third application is to eliminate one of forgrounds from second application.
 1. Read Video [Done]
 2. Get Motion Vector [Done]
 3. Get Foreground and Background [middle piont 1]
-4. Stick Background to Parorama [middle piont 2]
+4. Stick Background to Parorama [middle piont 2] [Done]
 5. Application Outputs 1:  Panorama Video
 6. Application Outputs 2:  Panorama Video with specified path
 7. Application Outputs 3:  Panorama Video by removing one of foreground object
 
-
-
-### Code structure
+### Code Structure
 
     main
     ├── ioVideo                 # handle read video and play video
@@ -29,8 +27,8 @@ The third application is to eliminate one of forgrounds from second application.
 
 ### Uasage Example
     java foregroundSplit.java "C:\\video_rgb\\Stairs_490_270_346"
-    python opencv/MP4toRGB.py -f video/Stairs.mp4
-    python opencv/MP4toRGB.py -d "C:\\video_rgb\\video2_240_424_383"
+    python main.py -f video/Stairs.mp4
+    python main.py -d "C:\\video_rgb\\video2_240_424_383"
     
 ### Member
 - [Chia-Hao Chang](https://www.linkedin.com/in/chia-hao-chang/)
