@@ -115,7 +115,7 @@ def getForegroundMask_withMV(motionVectors, height, width, mode=1, macroSize=16)
             labels_mode = stats.mode(labels, keepdims=False)[0]
             if labels_mode == 1:
                 labels = labels+1
-            labels.reshape((height//macroSize, width//macroSize, 1))
+            labels = labels.reshape((height//macroSize, width//macroSize, 1))
             for vCol in range(mvHeight):
                 for vRow in range(mvWidth):
                     if labels[vCol][vRow][0] == 1:
@@ -128,7 +128,7 @@ def getForegroundMask_withMV(motionVectors, height, width, mode=1, macroSize=16)
     
 # getForeAndBack, need to be merged with main
 def getForeAndBack(frames, motionVectors):
-    fMasks = getForegroundMask(frames, motionVectors,3)
+    fMasks = getForegroundMask(frames, motionVectors,2)
     fgs = []
     bgs = []    
     framesCount, height, width, _ = np.shape(frames) 
