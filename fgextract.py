@@ -127,7 +127,7 @@ def getForegroundMask_withMV(motionVectors, height, width, mode=1, macroSize=16)
     return fMasks
     
 # getForeAndBack, need to be merged with main
-def getForeAndBack(frames):
+def getForeAndBack(frames, motionVectors):
     fMasks = getForegroundMask(frames, motionVectors,3)
     fgs = []
     bgs = []    
@@ -178,5 +178,5 @@ if __name__ == '__main__':
     frames = frames[:120]
     # frames = mp4toRGB("./video/SAL.mp4")
     framesCount, height, width, _ = np.shape(frames)
-    fgs, bgs = getForeAndBack(frames)
+    fgs, bgs = getForeAndBack(frames, motionVectors)
     playVideo(fgs,300)
