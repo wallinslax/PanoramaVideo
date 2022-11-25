@@ -23,14 +23,66 @@ def loadRGB(filedir):
 def getMotionVectors(inImgs):
     motionVectors = []
     # File handle
-    motionVectorsFileName = "cache/motionVectors_SAL_437small.npy"
+    motionVectorsFileName = "cache/motionVectors_SAL.npy"
     if os.path.exists(motionVectorsFileName):
         with open(motionVectorsFileName, 'rb') as f:
             motionVectors = np.load(f)
         return motionVectors
 
-# getForegroundMask, need to be merged with main
-def getForegroundMask(motionVectors, height, width, mode=1, macroSize=16):
+# mode:
+# 1= Mode with mv
+# 2= K-Mean with mv
+# 3= opticalflow
+def  getForegroundMask(frames, motionVectors, mode, macroSize=16):
+
+    _, height, width, _ = np.shape(frames)
+    if mode == 1:
+        fMasks = getForegroundMask_withMV(motionVectors, height, width, 1, macroSize)
+    elif mode == 2:
+        fMasks = getForegroundMask_withMV(motionVectors, height, width, 2, macroSize)
+    elif mode == 3:
+        fMasks = getForegroundMask_withOF(frames, height, width)
+
+    return fMasks
+
+
+def getForegroundMask_withOF(frames, height, width):
+    fMasks = []
+    fMasks.append(np.zeros((height, width, 1)))
+    # Reading the first frame
+    frame1 = frames[0]
+    # Convert to gray scale
+    prvs = cv2.cvtColor(frame1, cv2.COLOR_BGR2GRAY)
+    # Create mask
+    hsv_mask = np.zeros_like(frame1)
+    # Make image saturation to a maximum value
+    hsv_mask[..., 1] = 255
+    for fc in tqdm(range(1, len(frames))):
+        frame2 = frames[fc]
+        next = cv2.cvtColor(frame2, cv2.COLOR_BGR2GRAY)
+
+        # Optical flow is now calculated
+        flow = cv2.calcOpticalFlowFarneback(prvs, next, None, 0.5, 3, 15, 3, 5, 1.2, 0)
+        # Compute magnite and angle of 2D vector
+        mag, ang = cv2.cartToPolar(flow[..., 0], flow[..., 1])
+        # Set image hue value according to the angle of optical flow
+        hsv_mask[..., 0] = ang * 180 / np.pi / 2
+        # Set value as per the normalized magnitude of optical flow
+        hsv_mask[..., 2] = np.minimum(mag*4,255)
+        prvs = next
+        hsv = hsv_mask.reshape(-1,3)
+        kmeans = KMeans(n_clusters=2)
+        kmeans.fit(hsv)
+        labels = kmeans.labels_
+        labels_mode = stats.mode(labels, keepdims=False)[0]
+        if labels_mode == 1:
+            labels = labels+1
+
+        fMasks.append(labels.reshape((height, width, 1)))
+    return fMasks
+
+# getForegroundMask_withMV, need to be merged with main
+def getForegroundMask_withMV(motionVectors, height, width, mode=1, macroSize=16):
     # mode:
     # 1= Mode
     # 2= K-Mean
@@ -59,7 +111,11 @@ def getForegroundMask(motionVectors, height, width, mode=1, macroSize=16):
             mvs = motionVector.reshape(-1,2)
             kmeans = KMeans(n_clusters=2)
             kmeans.fit(mvs)
-            labels = kmeans.labels_.reshape((height//macroSize, width//macroSize, 1))
+            labels = kmeans.labels_
+            labels_mode = stats.mode(labels, keepdims=False)[0]
+            if labels_mode == 1:
+                labels = labels+1
+            labels.reshape((height//macroSize, width//macroSize, 1))
             for vCol in range(mvHeight):
                 for vRow in range(mvWidth):
                     if labels[vCol][vRow][0] == 1:
@@ -71,7 +127,8 @@ def getForegroundMask(motionVectors, height, width, mode=1, macroSize=16):
     return fMasks
     
 # getForeAndBack, need to be merged with main
-def getForeAndBack(frames, fMasks):
+def getForeAndBack(frames):
+    fMasks = getForegroundMask(frames, motionVectors,3)
     fgs = []
     bgs = []    
     framesCount, height, width, _ = np.shape(frames) 
@@ -118,8 +175,8 @@ def getForeground_Naive(inImgs,motionVectors,macroSize):
 if __name__ == '__main__':
     motionVectors = getMotionVectors(None)
     frames = loadRGB(None)
+    frames = frames[:120]
     # frames = mp4toRGB("./video/SAL.mp4")
-    framesCount, height, width, _ = np.shape(frames) 
-    fMasks = getForegroundMask(motionVectors, height, width,2, 16)
-    fgs, bgs = getForeAndBack(frames, fMasks)
-    playVideo(fgs)
+    framesCount, height, width, _ = np.shape(frames)
+    fgs, bgs = getForeAndBack(frames)
+    playVideo(fgs,300)

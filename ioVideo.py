@@ -104,13 +104,13 @@ def numpy2pil(np_array: np.ndarray) -> Image:
     img = Image.fromarray(np_array, 'RGB')
     return img
 
-def playVideo(frames):
+def playVideo(frames, wait=3000):
     for frame in frames:
         # to display with cv2 we need to convert to BGR first
         frame = cv.cvtColor(frame, cv.COLOR_RGB2BGR)
         # frame = cv2.resize(frame, (960, 540))  
         cv.imshow('rgb_frames',frame)
-        keyboard = cv.waitKey(3000)
+        keyboard = cv.waitKey(wait)
         if keyboard == 'q' or keyboard == 27:
             break
 
