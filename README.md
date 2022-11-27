@@ -11,6 +11,10 @@ The third application is to eliminate one of forgrounds from second application.
 3. Get Foreground and Background [middle piont 1]
 4. Stick Background to Parorama [middle piont 2] [Done]
 5. Application Outputs 1:  Panorama Video
+
+https://user-images.githubusercontent.com/20626329/204124625-60b759e8-58d7-4392-bab0-5ffb8b300838.mp4
+
+
 6. Application Outputs 2:  Panorama Video with specified path
 7. Application Outputs 3:  Panorama Video by removing one of foreground object
 
