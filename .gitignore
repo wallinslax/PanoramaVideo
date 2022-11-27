@@ -1,3 +1,5 @@
 *gdoc
 rgb/
 *.npy
+__pycache__
+*.pyc

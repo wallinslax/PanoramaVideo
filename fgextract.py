@@ -151,7 +151,7 @@ def getForeground_Naive(inImgs,motionVectors,macroSize=16):
     nRow, nCol = height//macroSize, width//macroSize
     foreImgs = []
     for fIdx in range(nFrame):
-        curFrame = inImgs[fIdx][:]
+        curFrame = np.copy(inImgs[fIdx])
         motionVectorsPerFrame = motionVectors[fIdx]
         motionDict = defaultdict(int)
         for r in range(nRow):

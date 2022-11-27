@@ -8,10 +8,10 @@ from tqdm import tqdm
 from collections import defaultdict
 from ioVideo import mp4toRGB, loadRGB
 
-def getMotionVectors(inImgs, macroSize, nProcess, videoName, interval_MV=1):
+def getMotionVectors(inImgs, macroSize, videoName, interval_MV=1):
     nFrame, height, width, _ = np.shape(inImgs) 
     motionVectors = []
-
+    nProcess = len(inImgs)
     # File handle
     motionVectorsFileName = "cache/motionVectors_"+ videoName+"_"+ str(nProcess) +"_"+ str(interval_MV) +".npy"
     # motionVectorsFileName = "cache/motionVectors_SAL_437small.npy" ########
@@ -85,9 +85,17 @@ if __name__ == '__main__':
     parser.add_argument("-f", "--filepath", type=str, default="./video/SAL.mp4",help="specify video file name")
     parser.add_argument("-d", "--filedir", type=str, default="C:\\video_rgb\\SAL_490_270_437",help="specify rgb directory")
     args = parser.parse_args()
-    # Global variable
+
+    # 1. Read Video
+    inImgs, videoName = mp4toRGB(args.filepath)
+    # inImgs, videoName = loadRGB(args.filedir)
+
+    # 2. Get Motion Vector
     macroSize = 16
-    # process
-    inImgs = mp4toRGB(args.filepath)
-    inImgs = loadRGB(args.filedir)
-    motionVectors = getMotionVectors(inImgs)
+    interval_MV = 1
+    nFrame, height, width, _ = np.shape(inImgs) 
+    nProcess = 437
+
+    inImgs_sub = inImgs[0:nProcess]
+    motionVectors = getMotionVectors(inImgs_sub, macroSize, videoName,interval_MV=interval_MV)
+    inImgs_sub = inImgs_sub[interval_MV:] # only keep frames with motion vector
