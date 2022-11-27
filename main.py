@@ -39,16 +39,19 @@ if __name__ == '__main__':
 
     # 2. Get Motion Vector
     macroSize = 16
+    interval_MV = 2
     nFrame, height, width, _ = np.shape(inImgs) 
-    nProcess = nFrame
-    motionVectors = getMotionVectors(inImgs, macroSize, nProcess, videoName)
+    nProcess = 10
+    inImgs = inImgs[0:nProcess]
+    motionVectors = getMotionVectors(inImgs, macroSize, nProcess, videoName,interval_MV=interval_MV)
+    inImgs = inImgs[interval_MV:] # only keep frames with motion vector
 
     # 3. Get Foreground and Background [middle piont 1]
     
     # fMasks = getForegroundMask(motionVectors, height, width,2, macroSize)
     # fgs, bgs = getForeAndBack(inImgs, fMasks)
     fgs = getForeground_Naive(inImgs,motionVectors, macroSize)
-    playVideo(fgs)
+    playVideo(fgs,wait=3000)
 
     # 4. Stick Background to Parorama [middle piont 2]
     stichParorama(inImgs, videoName)

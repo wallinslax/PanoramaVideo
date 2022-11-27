@@ -20,10 +20,9 @@ def loadRGB(filedir):
             frames = np.load(f)
         return frames
 # simplified getMotionVectors
-def getMotionVectors(inImgs):
+def getMotionVectors(motionVectorsFileName = "cache/motionVectors_SAL_437small.npy"):
     motionVectors = []
-    # File handle
-    motionVectorsFileName = "cache/motionVectors_SAL.npy"
+    # File handle 
     if os.path.exists(motionVectorsFileName):
         with open(motionVectorsFileName, 'rb') as f:
             motionVectors = np.load(f)
@@ -147,13 +146,13 @@ def getForeAndBack(frames, motionVectors):
 
     return fgs,bgs
 
-def getForeground_Naive(inImgs,motionVectors,macroSize):
+def getForeground_Naive(inImgs,motionVectors,macroSize=16):
     nFrame, height, width, _ = np.shape(inImgs) 
     nRow, nCol = height//macroSize, width//macroSize
     foreImgs = []
-    for fIdx in range(1, len(motionVectors)+1):
+    for fIdx in range(nFrame):
         curFrame = inImgs[fIdx][:]
-        motionVectorsPerFrame = motionVectors[fIdx-1]
+        motionVectorsPerFrame = motionVectors[fIdx]
         motionDict = defaultdict(int)
         for r in range(nRow):
             for c in range(nCol):
@@ -173,10 +172,12 @@ def getForeground_Naive(inImgs,motionVectors,macroSize):
     return foreImgs
 
 if __name__ == '__main__':
-    motionVectors = getMotionVectors(None)
-    frames = loadRGB(None)
-    frames = frames[:120]
+    # frames = loadRGB(None)
+    frames, videoName = mp4toRGB(filepath="./video/SAL.mp4")
+    motionVectors = getMotionVectors(motionVectorsFileName = "cache/motionVectors_SAL_437.npy")
+    frames = frames[:30]
+    motionVectors = motionVectors[:30]
     # frames = mp4toRGB("./video/SAL.mp4")
     framesCount, height, width, _ = np.shape(frames)
     fgs, bgs = getForeAndBack(frames, motionVectors)
-    playVideo(fgs,300)
+    playVideo(fgs,3000)

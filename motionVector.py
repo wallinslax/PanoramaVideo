@@ -8,25 +8,21 @@ from tqdm import tqdm
 from collections import defaultdict
 from ioVideo import mp4toRGB, loadRGB
 
-gMacroSize = 8
-gHeight, gWidth = 0, 0
-def getMotionVectors(inImgs, macroSize, nProcess, videoName):
-    global gMacroSize, gHeight, gWidth
-    gMacroSize = macroSize
-    nFrame, gHeight, gWidth, _ = np.shape(inImgs) 
+def getMotionVectors(inImgs, macroSize, nProcess, videoName, interval_MV=1):
+    nFrame, height, width, _ = np.shape(inImgs) 
     motionVectors = []
 
     # File handle
-    motionVectorsFileName = "cache/motionVectors_"+ videoName+"_"+ str(nProcess) +".npy"
+    motionVectorsFileName = "cache/motionVectors_"+ videoName+"_"+ str(nProcess) +"_"+ str(interval_MV) +".npy"
     # motionVectorsFileName = "cache/motionVectors_SAL_437small.npy" ########
     if os.path.exists(motionVectorsFileName):
         with open(motionVectorsFileName, 'rb') as f:
             motionVectors = np.load(f)
         return motionVectors
 
-    for fIdx in tqdm(range(1,nProcess)):
-        curFrame, prvFrame = inImgs[fIdx], inImgs[fIdx - 1]
-        motionVectorsPerFrame = getMotionVectorsPerFrame(curFrame, prvFrame)
+    for fIdx in tqdm(range(interval_MV,nProcess)):
+        curFrame, prvFrame = inImgs[fIdx], inImgs[fIdx - interval_MV]
+        motionVectorsPerFrame = getMotionVectorsPerFrame(curFrame, prvFrame, macroSize)
         motionVectors.append(motionVectorsPerFrame)
 
     # File handle
@@ -35,18 +31,20 @@ def getMotionVectors(inImgs, macroSize, nProcess, videoName):
 
     return motionVectors
 
-def getMotionVectorsPerFrame(curFrame, prvFrame):
-    nRow, nCol = gHeight//gMacroSize, gWidth//gMacroSize
-    k = gMacroSize
+def getMotionVectorsPerFrame(curFrame, prvFrame, macroSize):
+    height, width, _ = np.shape(curFrame) 
+    nRow, nCol = height//macroSize, width//macroSize
+    searchRange = macroSize
+
     motionVectorsPerFrame = np.empty((nRow,nCol,2))
     motionVectorMADs = np.ones((nRow,nCol))* float('inf')
     for r in tqdm(range(nRow),leave=False):
         for c in range(nCol):
             motionVectorsPerFrame[r][c] = [0,0]
-            error = MAD(curFrame,prvFrame, 0, 0, r, c)
-            for vec_x in range(-k, k):
-                for vec_y in range(-k, k):
-                    error = MAD(curFrame,prvFrame, vec_x, vec_y, r, c)
+            error = MAD(curFrame,prvFrame, 0, 0, r, c, macroSize)
+            for vec_x in range(-searchRange, searchRange):
+                for vec_y in range(-searchRange, searchRange):
+                    error = MAD(curFrame,prvFrame, vec_x, vec_y, r, c, macroSize)
                     if error < motionVectorMADs[r][c]:
                         motionVectorMADs[r][c] = error
                         motionVectorsPerFrame[r][c] = [vec_x, vec_y]
@@ -54,22 +52,23 @@ def getMotionVectorsPerFrame(curFrame, prvFrame):
     # print(motionVectorsPerFrame)
     return motionVectorsPerFrame
 
-def MAD(curFrame, prvFrame, vec_x, vec_y, r, c):
-    base_x, base_y = c * gMacroSize, r * gMacroSize # current macroblock start point
+def MAD(curFrame, prvFrame, vec_x, vec_y, r, c, macroSize):
+    height, width, _ = np.shape(curFrame) 
+    base_x, base_y = c * macroSize, r * macroSize # current macroblock start point
     # early retrun when illegal previous macroblock
-    if base_x + vec_x < 0 or base_x + vec_x + gMacroSize >= gWidth\
-    or base_y + vec_y < 0 or base_y + vec_y + gMacroSize >= gHeight:
+    if base_x + vec_x < 0 or base_x + vec_x + macroSize >= width\
+    or base_y + vec_y < 0 or base_y + vec_y + macroSize >= height:
         return float('inf')
-    curMB_RGB = curFrame[base_y:(base_y + gMacroSize), base_x:(base_x + gMacroSize)]
-    prvMB_RGB = prvFrame[(base_y + vec_y):(base_y + vec_y + gMacroSize), (base_x + vec_x):(base_x + vec_x + gMacroSize)]
+    curMB_RGB = curFrame[base_y:(base_y + macroSize), base_x:(base_x + macroSize)]
+    prvMB_RGB = prvFrame[(base_y + vec_y):(base_y + vec_y + macroSize), (base_x + vec_x):(base_x + vec_x + macroSize)]
     curMB_Y = 0.299 * curMB_RGB[:,:,0] + 0.587 * curMB_RGB[:,:,1] + 0.114 * curMB_RGB[:,:,2]
     prvMB_Y = 0.299 * prvMB_RGB[:,:,0] + 0.587 * prvMB_RGB[:,:,1] + 0.114 * prvMB_RGB[:,:,2]
     subError = abs(np.subtract(curMB_Y,prvMB_Y)).sum()
     return subError
 
     subError = 0
-    for x in range(gMacroSize):
-        for y in range(gMacroSize):
+    for x in range(macroSize):
+        for y in range(macroSize):
             
             if base_x + x >= width or base_y + y >= height:
                 print(base_x + x)
