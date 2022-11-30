@@ -8,14 +8,21 @@ The third application is to eliminate one of forgrounds from second application.
 ### Progress
 1. Read Video [Done]
 2. Get Motion Vector [Done]
-3. Get Foreground and Background [middle piont 1]
+3. Get Foreground and Background [middle piont 1] [Done]
+
+https://user-images.githubusercontent.com/20626329/204932300-3b7bc119-16ff-4071-a4ac-b2dc8e15bf2a.mp4
+
+https://user-images.githubusercontent.com/20626329/204932308-2471b5c1-b16e-43ab-8e91-ef1d7492bf17.mp4
+
 4. Stick Background to Parorama [middle piont 2] [Done]
-5. Application Outputs 1:  Panorama Video
+![panorama_SAL](https://user-images.githubusercontent.com/20626329/204932333-54b48527-be3c-4f9f-ab39-950fce8facf3.jpg)
 
-https://user-images.githubusercontent.com/20626329/204124625-60b759e8-58d7-4392-bab0-5ffb8b300838.mp4
-
+5. Application Outputs 1:  Panorama with foreground motion trail
+![App1_SAL](https://user-images.githubusercontent.com/20626329/204932593-a217a62b-43bd-488f-a97d-543b7fa296c1.jpg)
 
 6. Application Outputs 2:  Panorama Video with specified path
+
+
 7. Application Outputs 3:  Panorama Video by removing one of foreground object
 
 ### Code Structure
@@ -29,8 +36,11 @@ https://user-images.githubusercontent.com/20626329/204124625-60b759e8-58d7-4392-
     ├── video                   # sample video to be processed
     └── README.md
 
+### Setup
+    git clone https://github.com/wallinslax/576Fall22FinalProject.git
+    pip install -r requirements.txt
+
 ### Uasage Example
-    java foregroundSplit.java "C:\\video_rgb\\Stairs_490_270_346"
     python main.py -f video/Stairs.mp4
     python main.py -d "C:\\video_rgb\\video2_240_424_383"
     
