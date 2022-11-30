@@ -6,14 +6,17 @@ from os import listdir
 from os.path import isfile, join
 from tqdm import tqdm
 from collections import defaultdict
-from ioVideo import mp4toRGB, loadRGB, playVideo
+from ioVideo import mp4toRGB, loadRGB, playVideo,saveVideo
 from motionVector import getMotionVectors
-from fgextract import getForegroundMask, getForeAndBack, getForeground_Naive
+from fgextract import getForeAndBack, getForeground_Naive
 
 def stichParorama(inImgs,videoName):
     # https://www.geeksforgeeks.org/opencv-panorama-stitching/
     stitchy=cv.Stitcher.create()
-    (dummy,output)=stitchy.stitch(inImgs[::10]) 
+    # cv.imshow('last Img',cv.cvtColor(inImgs[-10], cv.COLOR_RGB2BGR))
+    # cv.waitKey(0)
+    print('Sticking Panorama...')
+    (dummy,output)=stitchy.stitch(inImgs[::15]) 
     if dummy == cv.STITCHER_OK:
         print('Your Panorama is ready!!!')
         fileName = 'result/panorama_'+ videoName + '.jpg'
@@ -38,12 +41,9 @@ def genApp1(pararamaImg, fgs, videoName):
         #         if fg[r][c][0] != 0 or fg[r][c][1] != 0 or fg[r][c][2] != 0:
         #             tmp[r][c] = fg[r][c]
         videoFrames.append(tmp)
-    # write MP4 to disk
-    pHeight, pWidth, _ = np.shape(pararamaImg)
-    out = cv.VideoWriter('result/app1_' + videoName + '.mp4', cv.VideoWriter_fourcc(*'MP4V'), 30.0, frameSize=(pWidth,pHeight))
-    for frame in videoFrames:
-        out.write(cv.cvtColor(frame, cv.COLOR_RGB2BGR))
-    out.release()
+    filePath = 'result/app1_' + videoName + '.mp4'
+    saveVideo(videoFrames,filePath)
+
     return videoFrames
 
 if __name__ == '__main__':
@@ -60,20 +60,19 @@ if __name__ == '__main__':
     macroSize = 16
     interval_MV = 1
     nFrame, height, width, _ = np.shape(inImgs) 
-    nProcess = 437
+    motionVectors = getMotionVectors(inImgs, macroSize, videoName,interval_MV=interval_MV)
 
-    inImgs_sub = inImgs[0:nProcess]
-    motionVectors = getMotionVectors(inImgs_sub, macroSize, videoName,interval_MV=interval_MV)
-    inImgs_sub = inImgs_sub[interval_MV:] # only keep frames with motion vector
 
     # 3. Get Foreground and Background [middle piont 1]
-    # fgs, bgs = getForeAndBack(inImgs_sub, motionVectors)
-    fgs = getForeground_Naive(inImgs_sub, motionVectors, macroSize) # super fast
-
+    # fgs = getForeground_Naive(inImgs_sub, motionVectors, macroSize) # super fast
+    fgs, bgs = getForeAndBack(inImgs, motionVectors,videoName, mode=5)
+    saveVideo(fgs,filePath='cache/fgs_' + videoName + '.mp4')
+    saveVideo(bgs,filePath='cache/bgs_' + videoName + '.mp4')
+    
     # 4. Stick Background to Parorama [middle piont 2]
-    pararamaImg = stichParorama(inImgs, videoName)
+    pararamaImg = stichParorama(bgs, videoName)
 
     # 5. Application Outputs 1:  Panorama Video
-    videoFrames_App1 = genApp1(pararamaImg, fgs, videoName)
+    # videoFrames_App1 = genApp1(pararamaImg, fgs, videoName)
     # playVideo(videoFrames_App1,wait=3000)
     

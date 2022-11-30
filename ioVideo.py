@@ -21,9 +21,9 @@ def mp4toRGB(filepath: str):
             break
         
         ## [display_frame_number]
-        cv.rectangle(frame, (10, 2), (100,20), (255,255,255), -1)
-        cv.putText(frame, str(capture.get(cv.CAP_PROP_POS_FRAMES)), (15, 15),
-                cv.FONT_HERSHEY_SIMPLEX, 0.5 , (0,0,0))
+        # cv.rectangle(frame, (10, 2), (100,20), (255,255,255), -1)
+        # cv.putText(frame, str(capture.get(cv.CAP_PROP_POS_FRAMES)), (15, 15),
+        #         cv.FONT_HERSHEY_SIMPLEX, 0.5 , (0,0,0))
         
         ## [show]
         # cv.imshow('Frame', frame)
@@ -113,6 +113,14 @@ def playVideo(frames, wait=30):
         keyboard = cv.waitKey(wait)
         if keyboard == 'q' or keyboard == 27:
             break
+
+def saveVideo(frames, filePath = 'lala.mp4'):
+    # write MP4 to disk
+    height, width, _ = np.shape(frames[0])
+    out = cv.VideoWriter(filePath, cv.VideoWriter_fourcc(*'MP4V'), 30.0, frameSize=(width,height))
+    for frame in frames:
+        out.write(cv.cvtColor(frame, cv.COLOR_RGB2BGR))
+    out.release()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

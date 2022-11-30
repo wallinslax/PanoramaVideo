@@ -10,6 +10,7 @@ from ioVideo import mp4toRGB, loadRGB, playVideo
 from motionVector import getMotionVectors
 from fgextract import getForegroundMask, getForeAndBack, getForeground_Naive
 from parorama import stichParorama, genApp1
+
         
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -23,7 +24,7 @@ if __name__ == '__main__':
 
     # 2. Get Motion Vector
     macroSize = 16
-    interval_MV = 1
+    interval_MV = 2
     nFrame, height, width, _ = np.shape(inImgs) 
     nProcess = 437
 

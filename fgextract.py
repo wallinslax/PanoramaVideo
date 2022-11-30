@@ -6,9 +6,9 @@ import math
 from scipy import stats
 from tqdm import tqdm
 from sklearn.cluster import KMeans
-from ioVideo import mp4toRGB, playVideo
+from ioVideo import mp4toRGB, playVideo, saveVideo
 from collections import defaultdict
-
+import torch
 
 # simplified loadRGB
 def loadRGB(filedir):
@@ -22,7 +22,7 @@ def loadRGB(filedir):
             frames = np.load(f)
         return frames
 # simplified getMotionVectors
-def getMotionVectors(motionVectorsFileName = "cache/motionVectors_SAL_437small.npy"):
+def getMotionVectors(motionVectorsFileName = "cache/motionVectors_SAL_437_1.npy"):
     motionVectors = []
     # File handle 
     if os.path.exists(motionVectorsFileName):
@@ -45,7 +45,36 @@ def  getForegroundMask(frames, motionVectors, mode, macroSize=16):
         fMasks = getForegroundMask_withOF(frames, height, width)
     elif mode == 4:
         fMasks = getForegroundMask_withHOG(frames, height, width)
+    elif mode == 5:
+        fMasks = getForegroundMask_withYOLO(frames, height, width)
 
+    return fMasks
+
+def getForegroundMask_withYOLO(frames, height, width):
+    model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
+
+    fMasks = []
+    for frame in tqdm(frames):
+        results = model(frame)
+        # https://stackoverflow.com/questions/68008886/how-to-get-bounding-box-coordinates-from-yolov5-inference-with-a-custom-model
+        boxes = results.pandas().xyxy[0]  # img1 predictions (pandas)
+        # https://stackoverflow.com/questions/67244258/how-to-get-class-and-bounding-box-coordinates-from-yolov5-predictions
+        labels, cord_thres = results.xyxy[0][:, -1].numpy(), results.xyxy[0][:, :-1].numpy()
+        # results.show()
+
+        # Generate foreground mask
+        curFrame = np.copy(frame)
+        fMask = np.zeros((height, width)).astype('uint8')
+        for idx, label in enumerate(labels):
+            if label == 0: # person
+                xA, yA, xB, yB, _ = cord_thres[idx]
+                xA, yA, xB, yB = int(xA), int(yA), int(xB), int(yB)
+                fMask[yA:yB,xA:xB] = 255
+                curFrame[yA:yB,xA:xB] = 0 
+                # cv2.imshow('result',cv2.cvtColor(curFrame, cv2.COLOR_RGB2BGR))
+                # cv2.waitKey(0)
+
+        fMasks.append(fMask)
     return fMasks
 
 def getForegroundMask_withHOG(frames, height, width):
@@ -53,16 +82,18 @@ def getForegroundMask_withHOG(frames, height, width):
     # initialize the HOG descriptor/person detector
     hog = cv2.HOGDescriptor()
     hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+
     for frame in tqdm(frames):
         fMask = np.zeros((height, width)).astype('uint8')
         gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
         boxes, weights = hog.detectMultiScale(frame, winStride=(8,8) )
         boxes = np.array([[x, y, x + w, y + h] for (x, y, w, h) in boxes])
+
         for (xA, yA, xB, yB) in boxes:
             fMask[yA:yB,xA:xB] = 255
         fMasks.append(fMask)
-    return fMasks
 
+    return fMasks
 
 def getForegroundMask_withOF(frames, height, width):
     fMasks = []
@@ -172,8 +203,18 @@ def getForegroundMask_withMV(motionVectors, height, width, mode=1, macroSize=16)
     return fMasks
     
 # getForeAndBack, need to be merged with main
-def getForeAndBack(frames, motionVectors, mode=3):
-    fMasks = getForegroundMask(frames, motionVectors,mode)
+def getForeAndBack(frames, motionVectors, videoName, mode=3):
+    
+    # File handle
+    fMasks_FileName = "cache/fMasks_"+ videoName +"_"+ str(mode) +".npy"
+    if os.path.exists(fMasks_FileName):
+        with open(fMasks_FileName, 'rb') as f:
+            fMasks = np.load(f)
+    else:
+        fMasks = getForegroundMask(frames, motionVectors,mode)
+        with open(fMasks_FileName, 'wb') as f:
+            np.save(f,fMasks)
+
     black = np.zeros_like(frames[0])
     black = black+255
     fgs = []
@@ -183,6 +224,7 @@ def getForeAndBack(frames, motionVectors, mode=3):
         copy = frames[n].copy()
         fg = cv2.bitwise_and(copy, copy, mask = fMasks[n])
         bg = cv2.bitwise_not(black, copy, mask = fMasks[n])
+        
         # fg = np.zeros((height, width, 3)).astype('uint8')
         # bg = np.zeros((height, width, 3)).astype('uint8')
         
@@ -198,24 +240,28 @@ def getForeAndBack(frames, motionVectors, mode=3):
     return fgs,bgs
 
 def getForeground_Naive(inImgs,motionVectors,macroSize=16):
+    inImgs = inImgs[-len(motionVectors):] # only last len(motionVectors) has motion vector
     nFrame, height, width, _ = np.shape(inImgs) 
     nRow, nCol = height//macroSize, width//macroSize
     foreImgs = []
-    for fIdx in range(nFrame):
+    for fIdx in range(1,nFrame):
         curFrame = np.copy(inImgs[fIdx])
-        motionVectorsPerFrame = motionVectors[fIdx]
+        motionVectorsPrvFrame = motionVectors[fIdx-1]
+        motionVectorsCurFrame = motionVectors[fIdx]
         motionDict = defaultdict(int)
         for r in range(nRow):
             for c in range(nCol):
-                motionDict[tuple(motionVectorsPerFrame[r][c])] += 1
+                motionDict[tuple(motionVectorsCurFrame[r][c])] += 1
 
         bgMotion_x, bgMotion_y = sorted(motionDict.items(), key=lambda x:x[1])[-1][0]
 
         for r in range(nRow):
             for c in range(nCol):
-                vec_x, vec_y = motionVectorsPerFrame[r][c]
+                vec_x, vec_y = motionVectorsCurFrame[r][c]
+                vec_x_prv, vec_y_prv = motionVectorsPrvFrame[r][c]
+                vecDiff = abs(vec_x-vec_x_prv) + abs(vec_y-vec_y_prv)
                 delta = 2
-                if (bgMotion_x-delta) <= vec_x <= (bgMotion_x+delta) and (bgMotion_y-delta) <= vec_y <= (bgMotion_y+delta):
+                if (bgMotion_x-delta) <= vec_x <= (bgMotion_x+delta) and (bgMotion_y-delta) <= vec_y <= (bgMotion_y+delta) or vecDiff >= 1:
                     base_x, base_y = c * macroSize, r * macroSize # current macroblock start point
                     curFrame[base_y:(base_y + macroSize), base_x:(base_x + macroSize)] = 0 # black out the macroblock
         foreImgs.append(curFrame)
@@ -264,10 +310,12 @@ def visualizeMotionVector(motionVectors):
 if __name__ == '__main__':
     # frames = loadRGB(None)
     frames, videoName = mp4toRGB(filepath="./video/SAL.mp4")
-    motionVectors = getMotionVectors(motionVectorsFileName = "cache/motionVectors_SAL_437.npy")
+    motionVectors = getMotionVectors(motionVectorsFileName = "cache/motionVectors_SAL_437_1.npy")
     frames = frames[:]
     motionVectors = motionVectors[:]
     # visualizeMotionVector(motionVectors)
-    fgs, bgs = getForeAndBack(frames, motionVectors, 4)
+    fgs, bgs = getForeAndBack(frames, motionVectors,videoName, mode=5)
+
     playVideo(fgs, 30)
     playVideo(bgs, 30)
+    
