@@ -22,6 +22,7 @@ https://user-images.githubusercontent.com/20626329/204932308-2471b5c1-b16e-43ab-
 
 6. Application Outputs 2:  Panorama Video with specified path
 
+https://user-images.githubusercontent.com/20626329/204934381-18d44264-ec27-4005-a70a-25a883296086.mp4
 
 7. Application Outputs 3:  Panorama Video by removing one of foreground object
 
