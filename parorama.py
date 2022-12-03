@@ -16,10 +16,19 @@ def stichParorama(inImgs,videoName):
     # cv.imshow('last Img',cv.cvtColor(inImgs[-10], cv.COLOR_RGB2BGR))
     # cv.waitKey(0)
     print('Sticking Panorama...')
-    (dummy,output)=stitchy.stitch(inImgs[::15]) 
+    (dummy,output1)=stitchy.stitch(inImgs[::-1][::10]) 
+    fileName = 'result/' + videoName + '_panorama1.jpg'
+    cv.imwrite(fileName, cv.cvtColor(output1, cv.COLOR_RGB2BGR))
+
+    (dummy,output2)=stitchy.stitch(inImgs[-150:][::10]) 
+    fileName = 'result/'+ videoName + '_panorama2.jpg'
+    cv.imwrite(fileName, cv.cvtColor(output2, cv.COLOR_RGB2BGR))
+
+    (dummy,output)=stitchy.stitch([output2,output1]) 
+
     if dummy == cv.STITCHER_OK:
         print('Your Panorama is ready!!!')
-        fileName = 'result/panorama_'+ videoName + '.jpg'
+        fileName = 'result/'+ videoName + '_panorama.jpg'
         cv.imwrite(fileName, cv.cvtColor(output, cv.COLOR_RGB2BGR))
         # cv.imshow('final result',cv.cvtColor(output, cv.COLOR_RGB2BGR))
         # cv.waitKey(0)
@@ -28,23 +37,42 @@ def stichParorama(inImgs,videoName):
     return output
 
 def genApp1(pararamaImg, fgs, videoName):
-    videoFrames = []
     print("making App1...")
-    for fg in fgs:
-        tmp = np.copy(pararamaImg)
-        hieght, width, _ = np.shape(fg)
+    fgs = fgs[::40]
+    pHieght, pWidth, _ = np.shape(pararamaImg)
+    hieght, width, _ = np.shape(fgs[0])
+    delta = pWidth//hieght
+    for idx,fg in enumerate(fgs):
         # https://stackoverflow.com/questions/34436137/how-to-replace-all-zeros-in-numpy-matrix-with-corresponding-values-from-another
         d = (fg!=[0,0,0])
-        tmp[0:hieght,0:width,:][d] = fg[d]
+        shift = idx*delta
+        pararamaImg[0:hieght, (0+shift):(width+shift),:][d] = fg[d]
         # for r in range(hieght):
         #     for c in range(width):
         #         if fg[r][c][0] != 0 or fg[r][c][1] != 0 or fg[r][c][2] != 0:
         #             tmp[r][c] = fg[r][c]
-        videoFrames.append(tmp)
-    filePath = 'result/app1_' + videoName + '.mp4'
-    saveVideo(videoFrames,filePath)
+    fileName = 'result/App1_'+ videoName + '.jpg'
+    cv.imwrite(fileName, cv.cvtColor(pararamaImg, cv.COLOR_RGB2BGR))
 
-    return videoFrames
+def genApp2(pararamaImg, fgs, videoName):
+    print("making App2...")
+    pHieght, pWidth, _ = np.shape(pararamaImg)
+    hieght, width, _ = np.shape(fgs[0])
+    delta = pWidth//hieght
+    novelFrames = []
+    for idx,fg in enumerate(fgs):
+        tmp = np.copy(pararamaImg)
+        # https://stackoverflow.com/questions/34436137/how-to-replace-all-zeros-in-numpy-matrix-with-corresponding-values-from-another
+        d = (fg!=[0,0,0])
+        shift = idx*delta
+        tmp[0:hieght, (0+shift):(width+shift),:][d] = fg[d]
+        # for r in range(hieght):
+        #     for c in range(width):
+        #         if fg[r][c][0] != 0 or fg[r][c][1] != 0 or fg[r][c][2] != 0:
+        #             tmp[r][c] = fg[r][c]
+        novelFrames.append(tmp[:, (0+shift):(width+shift),:])
+    fileName = 'result/App2_'+ videoName + '.mp4'
+    saveVideo(novelFrames, filePath = fileName)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -62,17 +90,22 @@ if __name__ == '__main__':
     nFrame, height, width, _ = np.shape(inImgs) 
     motionVectors = getMotionVectors(inImgs, macroSize, videoName,interval_MV=interval_MV)
 
-
     # 3. Get Foreground and Background [middle piont 1]
     # fgs = getForeground_Naive(inImgs_sub, motionVectors, macroSize) # super fast
-    fgs, bgs = getForeAndBack(inImgs, motionVectors,videoName, mode=5)
-    saveVideo(fgs,filePath='cache/fgs_' + videoName + '.mp4')
-    saveVideo(bgs,filePath='cache/bgs_' + videoName + '.mp4')
+    fgs, bgs, fg1s, fg2s = getForeAndBack(inImgs, motionVectors,videoName, mode=5)
+    # playVideo(fg2s, 30)
+    # playVideo(bgs, 30)
+    saveVideo(fgs,filePath='cache/' + videoName + '_fgs.mp4')
+    saveVideo(fg1s,filePath='cache/' + videoName + '_fg1s.mp4')
+    saveVideo(fg2s,filePath='cache/' + videoName + '_fg2s.mp4')
+    saveVideo(bgs,filePath='cache/' + videoName + '_bgs.mp4')
     
     # 4. Stick Background to Parorama [middle piont 2]
     pararamaImg = stichParorama(bgs, videoName)
 
-    # 5. Application Outputs 1:  Panorama Video
-    # videoFrames_App1 = genApp1(pararamaImg, fgs, videoName)
-    # playVideo(videoFrames_App1,wait=3000)
+    # 5. Application Outputs 1: Panorama with foreground motion trail
+    # genApp1(pararamaImg, fgs, videoName)
+
+    # 6. Application Outputs 2: Panorama Video with specified path
+    genApp2(pararamaImg, fgs, videoName)
     

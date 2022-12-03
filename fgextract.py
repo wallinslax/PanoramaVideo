@@ -35,7 +35,7 @@ def getMotionVectors(motionVectorsFileName = "cache/motionVectors_SAL_437_1.npy"
 # 2= K-Mean with mv
 # 3= opticalflow
 def  getForegroundMask(frames, motionVectors, mode, macroSize=16):
-
+    print("calculate foreground mask for each frame...")
     _, height, width, _ = np.shape(frames)
     if mode == 1:
         fMasks = getForegroundMask_withMV(motionVectors, height, width, 1, macroSize)
@@ -46,14 +46,13 @@ def  getForegroundMask(frames, motionVectors, mode, macroSize=16):
     elif mode == 4:
         fMasks = getForegroundMask_withHOG(frames, height, width)
     elif mode == 5:
-        fMasks = getForegroundMask_withYOLO(frames, height, width)
-
+        return getForegroundMask_withYOLO(frames, height, width)
+        
     return fMasks
 
 def getForegroundMask_withYOLO(frames, height, width):
     model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
-
-    fMasks = []
+    fMasks, f1Masks, f2Masks, bgs = [], [], [], []
     for frame in tqdm(frames):
         results = model(frame)
         # https://stackoverflow.com/questions/68008886/how-to-get-bounding-box-coordinates-from-yolov5-inference-with-a-custom-model
@@ -63,19 +62,38 @@ def getForegroundMask_withYOLO(frames, height, width):
         # results.show()
 
         # Generate foreground mask
-        curFrame = np.copy(frame)
+        bg = np.copy(frame)
+        
         fMask = np.zeros((height, width)).astype('uint8')
+        f1Mask = np.zeros((height, width)).astype('uint8')
+        f2Mask = np.zeros((height, width)).astype('uint8')
         for idx, label in enumerate(labels):
-            if label == 0: # person
-                xA, yA, xB, yB, _ = cord_thres[idx]
-                xA, yA, xB, yB = int(xA), int(yA), int(xB), int(yB)
-                fMask[yA:yB,xA:xB] = 255
-                curFrame[yA:yB,xA:xB] = 0 
-                # cv2.imshow('result',cv2.cvtColor(curFrame, cv2.COLOR_RGB2BGR))
-                # cv2.waitKey(0)
+            xA, yA, xB, yB, _ = cord_thres[idx]
+            xA, yA, xB, yB = int(xA), int(yA), int(xB), int(yB)
+            if (xB-xA)<=30: continue
 
+            if label == 0: # 0: person
+                f1Mask[yA:yB,xA:xB] = 255
+                fMask[yA:yB,xA:xB] = 255
+                bg[yA:yB,xA:xB] = 0
+                
+            if label == 36: # 36: skateboard, yes fwe
+                f2Mask[yA:yB,xA:xB] = 255
+                fMask[yA:yB,xA:xB] = 255
+                bg[yA:yB,xA:xB] = 0
+
+            # cv2.imshow('result',cv2.cvtColor(bg, cv2.COLOR_RGB2BGR))
+            # cv2.waitKey(0)
+        
         fMasks.append(fMask)
-    return fMasks
+        f1Masks.append(f1Mask)
+        f2Masks.append(f2Mask)
+        bgs.append(bg) 
+
+    # playVideo(fMasks, 30)
+    # playVideo(f1Masks, 30)
+    # playVideo(f2Masks, 30)
+    return fMasks, f1Masks, f2Masks
 
 def getForegroundMask_withHOG(frames, height, width):
     fMasks = []
@@ -204,26 +222,29 @@ def getForegroundMask_withMV(motionVectors, height, width, mode=1, macroSize=16)
     
 # getForeAndBack, need to be merged with main
 def getForeAndBack(frames, motionVectors, videoName, mode=3):
-    
     # File handle
     fMasks_FileName = "cache/fMasks_"+ videoName +"_"+ str(mode) +".npy"
     if os.path.exists(fMasks_FileName):
         with open(fMasks_FileName, 'rb') as f:
-            fMasks = np.load(f)
+            fMasks, f1Masks, f2Masks = np.load(f)
     else:
-        fMasks = getForegroundMask(frames, motionVectors,mode)
+        fMasks, f1Masks, f2Masks = getForegroundMask(frames, motionVectors,mode)
         with open(fMasks_FileName, 'wb') as f:
-            np.save(f,fMasks)
+            np.save(f,[fMasks,f1Masks,f2Masks])
 
     black = np.zeros_like(frames[0])
     black = black+255
-    fgs = []
-    bgs = []    
+    fgs, bgs, fg1s, fg2s = [], [], [], []
+  
     framesCount, height, width, _ = np.shape(frames) 
     for n in tqdm(range(framesCount)):
         copy = frames[n].copy()
         fg = cv2.bitwise_and(copy, copy, mask = fMasks[n])
         bg = cv2.bitwise_not(black, copy, mask = fMasks[n])
+
+        copy1,copy2 = frames[n].copy(), frames[n].copy()
+        fg1 = cv2.bitwise_and(copy1, copy1, mask = f1Masks[n])
+        fg2 = cv2.bitwise_and(copy2, copy2, mask = f2Masks[n])
         
         # fg = np.zeros((height, width, 3)).astype('uint8')
         # bg = np.zeros((height, width, 3)).astype('uint8')
@@ -236,8 +257,9 @@ def getForeAndBack(frames, motionVectors, videoName, mode=3):
         #             bg[h][w][0:3] = frames[n][h][w][0:3]
         fgs.append(fg)
         bgs.append(bg)
-
-    return fgs,bgs
+        fg1s.append(fg1)
+        fg2s.append(fg2)
+    return fgs,bgs, fg1s, fg2s
 
 def getForeground_Naive(inImgs,motionVectors,macroSize=16):
     inImgs = inImgs[-len(motionVectors):] # only last len(motionVectors) has motion vector
@@ -306,7 +328,6 @@ def visualizeMotionVector(motionVectors):
     
     playVideo(res, 30)
 
-
 if __name__ == '__main__':
     # frames = loadRGB(None)
     frames, videoName = mp4toRGB(filepath="./video/SAL.mp4")
@@ -314,8 +335,9 @@ if __name__ == '__main__':
     frames = frames[:]
     motionVectors = motionVectors[:]
     # visualizeMotionVector(motionVectors)
-    fgs, bgs = getForeAndBack(frames, motionVectors,videoName, mode=5)
+    fgs, bgs, fg1s, fg2s = getForeAndBack(frames, motionVectors,videoName, mode=5)
 
-    playVideo(fgs, 30)
-    playVideo(bgs, 30)
+    playVideo(fg1s, 30)
+    playVideo(fg2s, 30)
+    playVideo(bgs, 30) 
     

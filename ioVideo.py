@@ -42,9 +42,16 @@ def mp4toRGB(filepath: str):
         #print(frame.ravel())
         #print(len(frame.ravel()))
         #print(frame[0][1])
-
     capture.release()
-    nFrame = len(frames)
+
+    # flip and mirror
+    hieght, width, _ = np.shape(frames[0])
+    if hieght > width:
+        framesN = []
+        for frame in frames:
+            framesN.append(cv.flip(frame[::-1],1))
+        frames = framesN
+
     return frames, videoName
 
 def loadRGB(filedir):
@@ -108,7 +115,8 @@ def playVideo(frames, wait=30):
     for frame in frames:
         # to display with cv2 we need to convert to BGR first
         frame = cv.cvtColor(frame, cv.COLOR_RGB2BGR)
-        frame = cv.resize(frame, (960, 540))  
+
+        frame = cv.resize(frame, (0,0), fx=0.5, fy=0.5)  
         cv.imshow('rgb_frames',frame)
         keyboard = cv.waitKey(wait)
         if keyboard == 'q' or keyboard == 27:
