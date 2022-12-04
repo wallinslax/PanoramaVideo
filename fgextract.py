@@ -419,8 +419,8 @@ if __name__ == '__main__':
     # playVideo(fg2s, 30)
     playVideo(fgs, 30)
     playVideo(bgs, 30) 
-    saveVideo(fgs, "./cache/video2_fgs.mp4")
-    saveVideo(bgs, "./cache/video2_bgs.mp4")
+    # saveVideo(fgs, "./cache/video2_fgs.mp4")
+    # saveVideo(bgs, "./cache/video2_bgs.mp4")
 
 
     
