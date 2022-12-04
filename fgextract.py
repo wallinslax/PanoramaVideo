@@ -9,6 +9,7 @@ from sklearn.cluster import KMeans
 from ioVideo import mp4toRGB, playVideo, saveVideo
 from collections import defaultdict
 import torch
+from sort import *
 
 # simplified loadRGB
 def loadRGB(filedir):
@@ -47,8 +48,50 @@ def  getForegroundMask(frames, motionVectors, mode, macroSize=16):
         fMasks = getForegroundMask_withHOG(frames, height, width)
     elif mode == 5:
         return getForegroundMask_withYOLO(frames, height, width)
+    elif mode == 6:
+        return getForegroundMask_withYOLOandSort(frames)
         
     return fMasks
+
+def getForegroundMask_withYOLOandSort(frames):
+    framesCount, height, width, _ = np.shape(frames) 
+    zeroMask = np.zeros((framesCount,height,width)).astype('uint8')
+    model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
+    mot_tracker = Sort()
+    fMaskDict = dict()
+    trackerCounts = dict()
+    for i, frame in tqdm(enumerate(frames)):
+        results = model(frame)
+        # https://stackoverflow.com/questions/68008886/how-to-get-bounding-box-coordinates-from-yolov5-inference-with-a-custom-model
+        boxes = results.pandas().xyxy[0]  # img1 predictions (pandas)
+        # https://stackoverflow.com/questions/67244258/how-to-get-class-and-bounding-box-coordinates-from-yolov5-predictions
+        labels, cord_thres = results.xyxy[0][:, -1].numpy(), results.xyxy[0][:, :-1].numpy()
+        # results.show()
+        
+        dets = []
+        for idx, label in enumerate(labels):
+            if label == 0: # 0: person
+                det = cord_thres[idx]
+                dets.append(det)
+        
+        trackers = mot_tracker.update(np.asarray(dets))
+        # print(trackers)
+        for tracker in trackers:
+            xA, yA, xB, yB, trackNo = tracker
+            xA, yA, xB, yB = int(xA), int(yA), int(xB), int(yB)
+            if fMaskDict.get(trackNo) is None:
+                fMaskDict[trackNo] = zeroMask.copy()
+                trackerCounts[trackNo] = 0
+            tmp = fMaskDict.get(trackNo)
+            tmp[i,yA:yB,xA:xB] = 255
+            fMaskDict[trackNo] = tmp
+            trackerCounts[trackNo] += 1
+
+    # print(fMaskDict)
+    maxTrackerNo = max(trackerCounts, key=trackerCounts.get)
+    return fMaskDict[maxTrackerNo]
+            
+            
 
 def getForegroundMask_withYOLO(frames, height, width):
     model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
@@ -219,7 +262,42 @@ def getForegroundMask_withMV(motionVectors, height, width, mode=1, macroSize=16)
             fMasks.append(fMask)
 
     return fMasks
-    
+
+def getForeAndBack_mode6(frames, motionVectors, videoName, mode=6):
+    # File handle
+    fMasks_FileName = "cache/fMasks_"+ videoName +"_"+ str(mode) +".npy"
+    if os.path.exists(fMasks_FileName):
+        with open(fMasks_FileName, 'rb') as f:
+            fMasks = np.load(f)
+    else:
+        fMasks = getForegroundMask(frames, motionVectors,mode)
+        with open(fMasks_FileName, 'wb') as f:
+            np.save(f,fMasks)
+
+    black = np.zeros_like(frames[0])
+    black = black+255
+    fgs, bgs = [], []
+  
+    framesCount, height, width, _ = np.shape(frames) 
+    for n in tqdm(range(framesCount)):
+        copy = frames[n].copy()
+        fg = cv2.bitwise_and(copy, copy, mask = fMasks[n])
+        bg = cv2.bitwise_not(black, copy, mask = fMasks[n])
+        
+        # fg = np.zeros((height, width, 3)).astype('uint8')
+        # bg = np.zeros((height, width, 3)).astype('uint8')
+        
+        # for h in range(height):
+        #     for w in range(width):
+        #         if fMasks[n][h][w][0] == 1:
+        #             fg[h][w][0:3] = frames[n][h][w][0:3]
+        #         else:
+        #             bg[h][w][0:3] = frames[n][h][w][0:3]
+        fgs.append(fg)
+        bgs.append(bg)
+    return fgs,bgs
+
+
 # getForeAndBack, need to be merged with main
 def getForeAndBack(frames, motionVectors, videoName, mode=3):
     # File handle
@@ -330,14 +408,20 @@ def visualizeMotionVector(motionVectors):
 
 if __name__ == '__main__':
     # frames = loadRGB(None)
-    frames, videoName = mp4toRGB(filepath="./video/SAL.mp4")
-    motionVectors = getMotionVectors(motionVectorsFileName = "cache/motionVectors_SAL_437_1.npy")
-    frames = frames[:]
-    motionVectors = motionVectors[:]
+    frames, videoName = mp4toRGB(filepath="./video/video2.mp4")
+    # motionVectors = getMotionVectors(motionVectorsFileName = "cache/motionVectors_SAL_437_1.npy")
+    # frames = frames[:]
+    # motionVectors = motionVectors[:]
     # visualizeMotionVector(motionVectors)
-    fgs, bgs, fg1s, fg2s = getForeAndBack(frames, motionVectors,videoName, mode=5)
-
-    playVideo(fg1s, 30)
-    playVideo(fg2s, 30)
+    # fgs, bgs, fg1s, fg2s = getForeAndBack(frames, None, videoName, mode=5)
+    fgs, bgs = getForeAndBack_mode6(frames, None, videoName, mode=6)
+    # playVideo(fg1s, 30)
+    # playVideo(fg2s, 30)
+    playVideo(fgs, 30)
     playVideo(bgs, 30) 
+    # saveVideo(fgs, "./cache/video2_fgs.mp4")
+    # saveVideo(bgs, "./cache/video2_bgs.mp4")
+
+
+    
     
