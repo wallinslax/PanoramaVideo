@@ -3,9 +3,10 @@ import logging
 import cv2
 
 # TODO: update FRAME_SPACE
-FRAME_SPACE = 50
+FRAME_SPACE = 10
 
 
+# TODO: rename function name
 def main(filepath):
     video = cv2.VideoCapture(filepath)
     curr_frame_index, key_frame_idx = 0, 0
@@ -24,8 +25,9 @@ def main(filepath):
 if __name__ == "__main__":
     logging.getLogger().setLevel(logging.INFO)
     parser = argparse.ArgumentParser()
-    parser.add_argument('filepath', nargs='?', default='./data/video/SAL.mp4',
-                        help='path of the video file (default: ./data/video/SAL.mp4)')
+    # TODO: update default value
+    parser.add_argument('filepath', nargs='?', default='./data/video/test3.mp4',
+                        help='path of the video file (default: ./data/video/test3.mp4)')
     args = parser.parse_args()
 
     main(args.filepath)
