@@ -19,11 +19,15 @@ def mp4toRGB(filepath: str):
         ret, frame = capture.read()
         if frame is None:
             break
-        
+
+        ## flip and mirror
+        hieght, width, _ = np.shape(frame)
+        if hieght > width: frame = cv.flip(frame[::-1],1) 
+
         ## [display_frame_number]
-        # cv.rectangle(frame, (10, 2), (100,20), (255,255,255), -1)
-        # cv.putText(frame, str(capture.get(cv.CAP_PROP_POS_FRAMES)), (15, 15),
-        #         cv.FONT_HERSHEY_SIMPLEX, 0.5 , (0,0,0))
+        cv.rectangle(frame, (10, 2), (100,20), (255,255,255), -1)
+        cv.putText(frame, str(capture.get(cv.CAP_PROP_POS_FRAMES)), (15, 15),
+                cv.FONT_HERSHEY_SIMPLEX, 0.5 , (0,0,0))
         
         ## [show]
         # cv.imshow('Frame', frame)
@@ -43,15 +47,6 @@ def mp4toRGB(filepath: str):
         #print(len(frame.ravel()))
         #print(frame[0][1])
     capture.release()
-
-    # flip and mirror
-    hieght, width, _ = np.shape(frames[0])
-    if hieght > width:
-        framesN = []
-        for frame in frames:
-            framesN.append(cv.flip(frame[::-1],1))
-        frames = framesN
-
     return frames, videoName
 
 def loadRGB(filedir):
