@@ -3,10 +3,8 @@ import logging
 import cv2
 import numpy as np
 
-import motion_trail_stitcher
-
-VIDEO_BASE_PATH = './out/motion_video_SAL/frame{}.jpg'
-FILE_PATH = './out/motion_video.mp4'
+VIDEO_BASE_PATH = './out/motion_video_frames/frame{}.jpg'
+FILE_PATH = './out/motion_video/motion_video.mp4'
 
 
 # TODO: rename function name

@@ -66,6 +66,31 @@ def main(key_frame_num):
     logging.info("panorama.jpg complete!")
 
 
+def generate_panorama(frames):
+    # TODO: use constant
+    if len(frames) < 2:
+        logging.warning('Length of frames must be greater than 2.')
+        exit()
+
+    curr_img = None
+
+    for i, frame in enumerate(frames):
+        if i == 0:
+            curr_img = frame
+        else:
+            next_img = frame
+            logging.info('Stitching frame{} and frame{}...'.format(i - 1, i))
+            curr_img = stitcher.stitch_image(curr_img, next_img)
+            # TODO: use constant
+            cv2.imwrite('./out/temp/temp' + str(i) + '.jpg', curr_img)
+
+    result = curr_img
+
+    # TODO: use constant
+    cv2.imwrite('./out/panorama/panorama.jpg', result)
+    logging.info("panorama.jpg complete!")
+
+
 if __name__ == "__main__":
     logging.getLogger().setLevel(logging.INFO)
     parser = argparse.ArgumentParser()

@@ -1,6 +1,8 @@
 import argparse
 import logging
 import cv2
+import video
+
 import motion_trail_stitcher
 
 PANORAMA_PATH = './out/panorama/panorama_SAL.jpg'
@@ -15,9 +17,25 @@ def main(foreground_num):
         logging.info('Stitching fg{} to panorama...'.format(i))
         motion_trail = motion_trail_stitcher.stitch_fg_bg(fg_img, motion_trail)
         # TODO: use constant
-        cv2.imwrite('./out/motion_video/frame' + str(i) + '.jpg', motion_trail)
+        cv2.imwrite('./out/motion_video_frames/frame' + str(i) + '.jpg', motion_trail)
 
     logging.info("motion video frames complete!")
+
+
+def generate_motion_video(panorama, fgs):
+    frames = []
+
+    for i, fg in enumerate(fgs):
+        motion_trail = panorama
+        logging.info('Stitching fg{} to panorama...'.format(i))
+        motion_trail = motion_trail_stitcher.stitch_fg_bg(fg, motion_trail)
+        frames.append(motion_trail)
+        # TODO: use constant
+        cv2.imwrite('./out/motion_video_frames/frame' + str(i) + '.jpg', motion_trail)
+
+    logging.info("motion video frames complete!")
+    video.save_video(frames)
+    logging.info("motion video saved!")
 
 
 if __name__ == "__main__":
