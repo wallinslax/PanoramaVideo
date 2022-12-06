@@ -103,7 +103,7 @@ def compute_homography(img1, img2):
 
     # TODO: update match_ratio
     # TODO: use constant
-    match_ratio = 0.4
+    match_ratio = 0.6
     good_matches = []
     for m, n in matches:
         if m.distance < match_ratio * n.distance:

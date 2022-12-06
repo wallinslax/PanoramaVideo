@@ -4,6 +4,47 @@ import numpy as np
 import stitcher
 
 
+logging.getLogger().setLevel(logging.INFO)
+
+
+def generate_motion_trails(panorama_path, foreground_paths):
+    logging.info('Reading foreground images...')
+    fg_imgs = get_fg_imgs(foreground_paths)
+    bg_img = cv2.imread(panorama_path)
+
+    logging.info('Calculating homograpies...')
+    hs = compute_homographies(fg_imgs, bg_img)
+    stitched_image = stitch_imgs(fg_imgs, bg_img, hs)
+
+    return stitched_image
+
+
+def get_fg_imgs(foreground_paths):
+    fg_imgs = []
+    for foreground_path in foreground_paths:
+        fg_img = cv2.imread(foreground_path)
+        # TODO: remove crop_black
+        fg_img = stitcher.crop_black(stitcher.cylindrical_project(stitcher.crop_black(fg_img)))
+        fg_imgs.append(fg_img)
+    return fg_imgs
+
+
+def compute_homographies(fg_imgs, bg_img):
+    hs = []
+    for fg_img in fg_imgs:
+        hs.append(compute_homography(fg_img, bg_img))
+    return hs
+
+
+def stitch_imgs(fg_imgs, bg_img, hs):
+    img_out = bg_img
+    for i, fg_img in enumerate(fg_imgs):
+        logging.info('Stitching fg{} to panorama...'.format(i))
+        img_out = stitch(fg_img, img_out, hs[i])
+
+    return img_out
+
+
 def stitch_fg_bg(fg_img_path, bg_img_path):
     if isinstance(fg_img_path, str):
         fg_img = cv2.imread(fg_img_path)
@@ -31,21 +72,47 @@ def stitch(fg_img, bg_img, h):
     fg_img_corners = np.float32([[0, 0], [0, h1],
                                  [w1, h1], [w1, 0]]).reshape(-1, 1, 2)
     fg_img_corners = cv2.perspectiveTransform(fg_img_corners, h)
-    bg_img_corners = np.float32([[0, 0], [0, h2],
-                                 [w2, h2], [w2, 0]]).reshape(-1, 1, 2)
-    output_corners = np.concatenate((fg_img_corners, bg_img_corners), axis=0)
 
-    [x_min, y_min] = np.int32(output_corners.min(axis=0, initial=None).ravel() - 0.5)
-    [x_max, y_max] = np.int32(output_corners.max(axis=0, initial=None).ravel() + 0.5)
+    [x_min, y_min] = np.int32(fg_img_corners.min(axis=0, initial=None).ravel() - 0.5)
+    [x_max, y_max] = np.int32(fg_img_corners.max(axis=0, initial=None).ravel() + 0.5)
 
-    img_out = cv2.warpPerspective(fg_img, h, (x_max - x_min, y_max - y_min))
+    img_out = cv2.warpPerspective(fg_img, h, (w2, h2))
+
+    img_out_gray = cv2.cvtColor(img_out, cv2.COLOR_BGR2GRAY)
+    # TODO: use constant
+    img_out_mask = cv2.threshold(img_out_gray, 5, 255, cv2.THRESH_BINARY)[1]
 
     for y in range(y_min, y_max):
         for x in range(x_min, x_max):
-            if not np.any(img_out[y][x]) and x < bg_img.shape[1] and y < bg_img.shape[0]:
-                img_out[y][x] = bg_img[y][x]
+            if x < bg_img.shape[1] and y < bg_img.shape[0] and np.any(img_out_mask[y][x]):
+                bg_img[y][x] = img_out[y][x]
 
-    return img_out
+    return bg_img
+
+
+# # TODO: extract function
+# def stitch(fg_img, bg_img, h):
+#     h1, w1 = fg_img.shape[0:2]
+#     h2, w2 = bg_img.shape[0:2]
+#
+#     fg_img_corners = np.float32([[0, 0], [0, h1],
+#                                  [w1, h1], [w1, 0]]).reshape(-1, 1, 2)
+#     fg_img_corners = cv2.perspectiveTransform(fg_img_corners, h)
+#     bg_img_corners = np.float32([[0, 0], [0, h2],
+#                                  [w2, h2], [w2, 0]]).reshape(-1, 1, 2)
+#     output_corners = np.concatenate((fg_img_corners, bg_img_corners), axis=0)
+#
+#     [x_min, y_min] = np.int32(output_corners.min(axis=0, initial=None).ravel() - 0.5)
+#     [x_max, y_max] = np.int32(output_corners.max(axis=0, initial=None).ravel() + 0.5)
+#
+#     img_out = cv2.warpPerspective(fg_img, h, (x_max - x_min, y_max - y_min))
+#
+#     for y in range(y_min, y_max):
+#         for x in range(x_min, x_max):
+#             if not np.any(img_out[y][x]) and x < bg_img.shape[1] and y < bg_img.shape[0]:
+#                 img_out[y][x] = bg_img[y][x]
+#
+#     return img_out
 
 
 # TODO: change function name
