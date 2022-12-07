@@ -28,8 +28,17 @@ def mp4toRGB(filepath: str):
         cv.rectangle(frame, (10, 2), (100,20), (255,255,255), -1)
         cv.putText(frame, str(capture.get(cv.CAP_PROP_POS_FRAMES)), (15, 15),
                 cv.FONT_HERSHEY_SIMPLEX, 0.5 , (0,0,0))
+        ## blur detection
+        # gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+        # fm = cv.Laplacian(gray, cv.CV_64F).var()
+        # # Sample quality bar. Parameters adjusted manually to fit horizontal image size
+        # cv.rectangle(frame, (10, 22), (100,40), (255,255,255), -1)
+        # cv.putText(frame, str(fm), (15, 35),
+        #         cv.FONT_HERSHEY_SIMPLEX, 0.5 , (0,0,0))
+        # cv.rectangle(frame, (0, 1080), (int(fm*1.6), 1040), (0,0,255), thickness=cv.FILLED)
         
         ## [show]
+        # frame = cv.resize(frame, (0,0), fx=0.5, fy=0.5) 
         # cv.imshow('Frame', frame)
         # keyboard = cv.waitKey(30)
         # if keyboard == 'q' or keyboard == 27:
@@ -127,12 +136,33 @@ def saveVideo(frames, filePath = 'lala.mp4'):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-f", "--filepath", type=str, default="./video/SAL.mp4",help="specify video file name")
+    parser.add_argument("-f", "--filepath", type=str, default="./video.mp4",help="specify video file name")
     parser.add_argument("-d", "--filedir", type=str, default="C:\\video_rgb\\SAL_490_270_437",help="specify rgb directory")
     args = parser.parse_args()
 
     # inImgs = mp4toRGB(args.filepath)
-    inImgs = loadRGB(args.filedir)
+    # inImgs = loadRGB(args.filedir)
+
+    # MV test
+    height = 540
+    width = 960
+    frame = np.zeros((height,width,3))
+    with open("mvTest/reference.rgb", "rb") as f:
+        for y in range(height):
+            for x in range(width):
+                r = int.from_bytes(f.read(1), "big")
+                frame[y][x][0] = r
+        for y in range(height):
+            for x in range(width):
+                g = int.from_bytes(f.read(1), "big")
+                frame[y][x][1] = g
+        for y in range(height):
+            for x in range(width):
+                b = int.from_bytes(f.read(1), "big")
+                frame[y][x][2] = b
+
+    cv.imshow('rfImg',frame)
+    cv.waitKey(0)
     # Debug View-----------------------------------
     # sampleImg = numpy2pil(inImgs2[-1])
     # sampleImg.show()

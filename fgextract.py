@@ -10,6 +10,8 @@ from ioVideo import mp4toRGB, playVideo, saveVideo
 from collections import defaultdict
 import torch
 from sort import *
+from motionVector import getMotionVectors
+from motion_trail_stitcherSD import compute_homography,stitch
 
 def getForegroundMask_withYOLOandSort(frames):
     framesCount, height, width, _ = np.shape(frames) 
@@ -73,7 +75,7 @@ def getForeAndBack_mode6(frames,videoName):
         fg1 = cv2.bitwise_and(copy, copy, mask = f1Masks[n])
         fgMask = cv2.bitwise_or(f1Masks[n],f2Masks[n])
         fg = cv2.bitwise_and(copy, copy, mask = fgMask)
-        bg = cv2.bitwise_not(black, copy, mask = fgMask)
+        bg = cv2.bitwise_not(black, copy, mask = f1Masks[n])
         fg1s.append(fg1)
         fgs.append(fg)
         bgs.append(bg)
@@ -97,6 +99,7 @@ def getFgBg_withYOLO(frames, videoName):
         boxes = results.pandas().xyxy[0]  # img1 predictions (pandas)
         # https://stackoverflow.com/questions/67244258/how-to-get-class-and-bounding-box-coordinates-from-yolov5-predictions
         labels, cord_thres = results.xyxy[0][:, -1].numpy(), results.xyxy[0][:, :-1].numpy()
+        # results.print()
         # results.show()
 
         # Generate foreground mask
@@ -109,28 +112,27 @@ def getFgBg_withYOLO(frames, videoName):
         f2Mask = np.zeros((height, width)).astype('uint8')
         fMask = np.zeros((height, width)).astype('uint8')
         
-        for label, cord_thre in zip(labels,cord_thres):
+        for label, cord_thre in zip(labels, cord_thres):
             xA, yA, xB, yB, confidence = cord_thre
             xA, yA, xB, yB = int(xA), int(yA), int(xB), int(yB)
-            if (xB-xA)<=30: continue
-
+            # if (xB-xA)<=30: continue
+            rg = 300
             if label == 0 and confidence >0.7: # 0: person
-                fg1[yA:yB,xA:xB] = frame[yA:yB,xA:xB]
-                rg = 200
                 fg1Trim = np.copy(frame[(yA-rg):(yB+rg),(xA-rg):(xB+rg)])
+                fg1[(yA-rg):(yB+rg),(xA-rg):(xB+rg)] = frame[(yA-rg):(yB+rg),(xA-rg):(xB+rg)]
                 fg[yA:yB,xA:xB] = frame[yA:yB,xA:xB]
                 f1Mask[yA:yB,xA:xB] = 255
                 fMask[yA:yB,xA:xB] = 255
                 bg[yA:yB,xA:xB] = 0
                 
             if label == 36 and confidence >0.8: # 36: skateboard
-                fg2[yA:yB,xA:xB] = frame[yA:yB,xA:xB]
+                fg2[(yA-rg):(yB+rg),(xA-rg):(xB+rg)] = frame[(yA-rg):(yB+rg),(xA-rg):(xB+rg)]
                 fg[yA:yB,xA:xB] = frame[yA:yB,xA:xB]
                 f2Mask[yA:yB,xA:xB] = 255
                 fMask[yA:yB,xA:xB] = 255
                 bg[yA:yB,xA:xB] = 0
 
-            # cv2.imshow('result',cv2.cvtColor(fg1, cv2.COLOR_RGB2BGR))
+            # cv2.imshow('result',cv2.cvtColor(fg1Trim, cv2.COLOR_RGB2BGR))
             # cv2.waitKey(0)
         
         fMasks.append(fMask)
@@ -141,6 +143,7 @@ def getFgBg_withYOLO(frames, videoName):
         fg1Trims.append(fg1Trim)
         fg2s.append(fg2)
         fgs.append(fg)
+        # print(fg1Trim.size)
 
     # playVideo(fg1s, 30)
     # playVideo(fg2s, 30)
@@ -149,16 +152,81 @@ def getFgBg_withYOLO(frames, videoName):
     #     np.save(f,[fg1s, fg2s, fgs, bgs, fg1Trims])
     return fg1s, fg2s, fgs, bgs, fg1Trims
 
-if __name__ == '__main__':
-    frames, videoName = mp4toRGB(filepath="./video/video2.mp4")
-    fg1s, fgs, bgs = getForeAndBack_mode6(frames, videoName)
-    playVideo(fg1s, 30)
-    playVideo(fgs, 30)
-    playVideo(bgs, 30) 
-    # saveVideo(fg1s, "./cache/video2_fg1s.mp4")
-    # saveVideo(fgs, "./cache/video2_fgs.mp4")
-    # saveVideo(bgs, "./cache/video2_bgs.mp4")
+def genApp3(frames,motionVectors,videoName):
+    print('Generate background black fills...')
+    k = 40
+    macroSize = 16
+    frames = frames[-len(motionVectors):]
+    nFrame, height, width, _ = np.shape(frames) 
+    nRow, nCol = height//macroSize, width//macroSize
 
+    model = torch.hub.load('ultralytics/yolov5', 'yolov5s')
+    bgs, bgFills,bgFilleds = [], [], []
+    for fIdx in tqdm(range(k,nFrame)):
+        motionVectorsPerFrame = motionVectors[fIdx]
+        motionDict = defaultdict(int)
+        for r in range(nRow):
+            for c in range(nCol):
+                motionDict[tuple(motionVectorsPerFrame[r][c])] += 1
+        bgMotion_x, bgMotion_y = sorted(motionDict.items(), key=lambda x:x[1])[-1][0]
+        bgMotion_x, bgMotion_y = int(bgMotion_x), int(bgMotion_y)
+        # print (bgMotion_x, bgMotion_y)
+
+        results = model(frames[fIdx])
+        labels, cord_thres = results.xyxy[0][:, -1].numpy(), results.xyxy[0][:, :-1].numpy()
+
+        bg = np.copy(frames[fIdx])
+        bgFill = []
+        rg = max(bgMotion_x,bgMotion_y)*(k//4)
+        for label, cord_thre in zip(labels,cord_thres):
+            xA, yA, xB, yB, confidence = cord_thre
+            xA, yA, xB, yB = int(xA), int(yA), int(xB), int(yB)
+            if label == 0 and confidence >0.7: # 0: person
+                bg[yA:yB,xA:xB] = 0
+                vec_x, vec_y = bgMotion_x*k, bgMotion_y*k
+                bgFill = frames[fIdx- k][(yA+vec_y-rg*2):(yB+vec_y+rg*2),(xA+vec_x-rg):(xB+vec_x+rg*2)]
+                # if fIdx == 400:
+                #     cv2.imshow('bg',bg)
+                #     cv2.imshow('bgFill',bgFill)
+                #     cv2.waitKey(0)
+        h = compute_homography(bgFill, bg)
+        if len(h) == 0:
+            continue
+        stitchedBg = stitch(bgFill, bg, h)
+        # cv2.imshow('stitchedBg',stitchedBg)
+        # cv2.waitKey(0)
+        bgFilleds.append(stitchedBg)
+        # bgs.append(bgs)
+        # bgFills.append(bgFill)
+        if len(bgFilleds) == 199:
+            saveVideo(bgFilleds, filePath='cache/'+ videoName + '_bgFills/' + videoName + 'bgFilledsMiddle.mp4')
+    # playVideo(bgFilleds, 3000)
+    # for idx, bgsFill in enumerate(bgsFills):
+    #     fileName = 'cache/'+ videoName + '_bgFills/'+ videoName + '_bgFill_'+ str(idx) +'.jpg'
+    #     if len(bgsFill) == 0 or bgsFill.size == 0: 
+    #         continue
+    #     cv2.imwrite(fileName, cv2.cvtColor(bgsFill, cv2.COLOR_RGB2BGR))
+    saveVideo(bgFilleds,filePath='cache/'+ videoName + '_bgFills/' + videoName + 'bgFilleds.mp4')
+    return bgs,bgFills,bgFilleds
+    
+
+if __name__ == '__main__':
+    frames, videoName = mp4toRGB(filepath="./video/SAL.mp4")
+    ## background Filling  ----------------------------
+    motionVectors = getMotionVectors(frames, 16, videoName,interval_MV=1)
+    bgs, bgsFills, bgFilleds = genApp3(frames, motionVectors, videoName)
+    # --------------------------------------------------
+    # fg1s, fgs, bgs = getForeAndBack_mode6(frames, videoName)
+    # fg1s, fg2s, fgs, bgs, fg1Trims = getFgBg_withYOLO(frames, videoName)
+        
+    # playVideo(fg1s, 30)
+    # playVideo(fgs, 30)
+    # playVideo(bgs, 30) 
+    # saveVideo(fg1s,filePath='cache/' + videoName + '_fg1s.mp4')
+    # saveVideo(fgs,filePath='cache/' + videoName + '_fgs.mp4')
+    # saveVideo(bgs,filePath='cache/' + videoName + '_bgs.mp4')
+
+    
 
     
     

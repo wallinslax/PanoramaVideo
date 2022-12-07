@@ -133,6 +133,8 @@ def getForegroundMask_withOF(frames, height, width):
         hsv_mask[..., 0] = ang * 180 / np.pi / 2
         # Set value as per the normalized magnitude of optical flow
         hsv_mask[..., 2] = np.minimum(mag*4,255)
+        cv2.imshow('hsv_mask',cv2.cvtColor(hsv_mask, cv2.COLOR_HSV2BGR))
+        cv2.waitKey(0)
         prvs = next
         hsv = hsv_mask.reshape(-1,3)
         kmeans = KMeans(n_clusters=2)
@@ -406,13 +408,13 @@ def visualizeMotionVector(motionVectors):
 
 if __name__ == '__main__':
     # frames = loadRGB(None)
-    frames, videoName = mp4toRGB(filepath="./video/video2.mp4")
+    frames, videoName = mp4toRGB(filepath="./video/SAL.mp4")
     # motionVectors = getMotionVectors(motionVectorsFileName = "cache/motionVectors_SAL_437_1.npy")
     # frames = frames[:]
     # motionVectors = motionVectors[:]
     # visualizeMotionVector(motionVectors)
-    # fgs, bgs, fg1s, fg2s = getForeAndBack(frames, None, videoName, mode=3)
-    fgs, bgs = getForeAndBack_mode6(frames, None, videoName, mode=6)
+    fgs, bgs, fg1s, fg2s = getForeAndBack(frames, None, videoName, mode=3)
+    # fgs, bgs = getForeAndBack_mode6(frames, None, videoName, mode=6)
     playVideo(fgs, 30)
     playVideo(bgs, 30) 
     # saveVideo(fgs, "./cache/video2_fgs.mp4")

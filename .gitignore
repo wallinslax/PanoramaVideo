@@ -3,3 +3,5 @@ rgb/
 *.npy
 __pycache__
 *.pyc
+*.jpg
+*.zip
