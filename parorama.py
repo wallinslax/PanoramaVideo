@@ -1,3 +1,4 @@
+import random
 import cv2 as cv
 import numpy as np
 from PIL import Image
@@ -29,14 +30,15 @@ def genApp2(pnrmImgs, orgHieght, orgWidth, videoName):
     pHieght, pWidth, _ = np.shape(pnrmImgs[0])
     delta = pWidth//len(pnrmImgs)
     novelFrames = []
-    # orgHieght=200
-    # orgWidth=400
+    focusHieght, focusWidth = orgHieght//2, orgWidth//2
+
     for idx,pnrmImg in enumerate(pnrmImgs): 
-        shift = idx*delta
-        if (orgWidth+shift)>=pWidth:
-            shift = pWidth - orgWidth
-            print("novel frame out of range")
-        novelFrames.append(pnrmImg[0:orgHieght,(0+shift):(orgWidth+shift)])
+        xShift = idx*delta
+        if (orgWidth+xShift)>=pWidth:
+            xShift = pWidth - orgWidth
+        yShift = random.randint(30, 50)
+
+        novelFrames.append(pnrmImg[(0 + yShift):(focusHieght + yShift), (0 + xShift):(focusWidth + xShift)])
     fileName = 'result/'+ videoName + '_App2.mp4'
     saveVideo(novelFrames, filePath = fileName)
     return novelFrames

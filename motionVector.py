@@ -52,13 +52,12 @@ def getMotionVectorsPerFrame(curFrame, prvFrame, macroSize):
                         motionVectorsPerFrame[r][c] = [vec_x, vec_y]
 
     # print(motionVectorsPerFrame)
-    # motionDict = defaultdict(int)
-    # for r in range(nRow):
-    #     for c in range(nCol):
-    #         motionDict[tuple(motionVectorsPerFrame[r][c])] += 1
-    # bgMotion_x, bgMotion_y = sorted(motionDict.items(), key=lambda x:x[1])[-1][0]
-    # print('all macroblock=',sum(motionDict.values()))
-    # print (bgMotion_x, bgMotion_y)
+    motionDict = defaultdict(int)
+    for r in range(nRow):
+        for c in range(nCol):
+            motionDict[tuple(motionVectorsPerFrame[r][c])] += 1
+    bgMotion_x, bgMotion_y = sorted(motionDict.items(), key=lambda x:x[1])[-1][0]
+    print (bgMotion_x, bgMotion_y)
     return motionVectorsPerFrame
 
 def MAD(curFrame, prvFrame, vec_x, vec_y, r, c, macroSize):
@@ -72,9 +71,9 @@ def MAD(curFrame, prvFrame, vec_x, vec_y, r, c, macroSize):
     prvMB_BGR = prvFrame[(base_y + vec_y):(base_y + vec_y + macroSize), (base_x + vec_x):(base_x + vec_x + macroSize)]
 
     # (bgMotion_x, bgMotion_y)= (8.0, 15.0): 310; (15.0, 8.0): 414; (11.0, 15.0): 273; (13.0, 15.0): 284
-    curMB_Y = 0.299 * curMB_BGR[:,:,2] + 0.587 * curMB_BGR[:,:,1] + 0.114 * curMB_BGR[:,:,0]
-    prvMB_Y = 0.299 * prvMB_BGR[:,:,2] + 0.587 * prvMB_BGR[:,:,1] + 0.114 * prvMB_BGR[:,:,0]
-    subError1 = abs(np.subtract(curMB_Y,prvMB_Y)).sum()
+    # curMB_Y = 0.299 * curMB_BGR[:,:,2] + 0.587 * curMB_BGR[:,:,1] + 0.114 * curMB_BGR[:,:,0]
+    # prvMB_Y = 0.299 * prvMB_BGR[:,:,2] + 0.587 * prvMB_BGR[:,:,1] + 0.114 * prvMB_BGR[:,:,0]
+    # subError1 = abs(np.subtract(curMB_Y,prvMB_Y)).sum()
 
     # (bgMotion_x, bgMotion_y)= (11.0, 15.0) 244, (8.0, 15.0) 244, (13,15) 232
     # curMB_Y = 0.299 * curMB_BGR[:,:,0] + 0.587 * curMB_BGR[:,:,1] + 0.114 * curMB_BGR[:,:,2]
@@ -82,11 +81,11 @@ def MAD(curFrame, prvFrame, vec_x, vec_y, r, c, macroSize):
     # subError2 = abs(np.subtract(curMB_Y,prvMB_Y)).sum()
 
     # (bgMotion_x, bgMotion_y)= (13.0 8.0) centralize MV
-    # curMB_Grey = cv.cvtColor(curMB_BGR,cv.COLOR_BGR2GRAY)
-    # prvMB_Grey = cv.cvtColor(prvMB_BGR,cv.COLOR_BGR2GRAY)
-    # curMB_Grey = np.array(curMB_Grey).astype(np.int16)
-    # prvMB_Grey = np.array(prvMB_Grey).astype(np.int16)
-    # subError3 = abs(np.subtract(curMB_Grey,prvMB_Grey)).sum()
+    curMB_Grey = cv.cvtColor(curMB_BGR,cv.COLOR_BGR2GRAY)
+    prvMB_Grey = cv.cvtColor(prvMB_BGR,cv.COLOR_BGR2GRAY)
+    curMB_Grey = np.array(curMB_Grey).astype(np.int16)
+    prvMB_Grey = np.array(prvMB_Grey).astype(np.int16)
+    subError3 = abs(np.subtract(curMB_Grey,prvMB_Grey)).sum()
 
     # NO centralize MV
     # curMB_HSV = cv.cvtColor(curMB_BGR,cv.COLOR_BGR2HSV)
@@ -98,7 +97,7 @@ def MAD(curFrame, prvFrame, vec_x, vec_y, r, c, macroSize):
     # if  subError1 != subError3:
     #     print("mismatch")
 
-    return subError1
+    return subError3
 
     subErrorEvl = 0
     for x in range(macroSize):
@@ -146,7 +145,7 @@ if __name__ == '__main__':
     '''
 
     # 1. Read Video
-    inImgs, videoName = mp4toRGB("video/SAL.mp4")
+    inImgs, videoName = mp4toRGB("video/test1.mp4")
     # inImgs, videoName = loadRGB(args.filedir)
 
     # 2. Get Motion Vector
