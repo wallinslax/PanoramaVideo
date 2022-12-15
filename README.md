@@ -3,11 +3,7 @@
 In this project, we use motion vector of each macroblock to sperate foreground and background.
 The first application is composing panorama with foreground motion trail.
 The second application is producing a panorama video by apply forground on panorama.
-The third applic
-
-
-
-ation is to create original video without foregound.
+The third application is to create original video without foregound.
 
 ### Result
 1. Original Video
@@ -40,7 +36,6 @@ https://user-images.githubusercontent.com/20626329/207740243-4c6ee809-a124-4ce6-
 [![Panorama Video without foreground](https://img.youtube.com/vi/GoLkilTI9Zg/0.jpg)](https://www.youtube.com/watch?v=GoLkilTI9Zg)
 
 
-
 ### Code Structure
 
     main
@@ -56,9 +51,8 @@ https://user-images.githubusercontent.com/20626329/207740243-4c6ee809-a124-4ce6-
     git clone https://github.com/wallinslax/576Fall22FinalProject.git
     pip install -r requirements.txt
 
-### Uasage Example
-    python main.py -f video/Stairs.mp4
-    python main.py -d "C:\\video_rgb\\video2_240_424_383"
+### Generate the result above
+    python main.py -f video/SAL.mp4
     
 ### Member
 - [Chia-Hao Chang](https://www.linkedin.com/in/chia-hao-chang/)
