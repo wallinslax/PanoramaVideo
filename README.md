@@ -20,8 +20,7 @@ https://user-images.githubusercontent.com/20626329/207740243-4c6ee809-a124-4ce6-
 
 4. Panorama without foregound
 
-![1  SAL_panorama](https://user-images.githubusercontent.com/20626329/207740803-495cced0-8cf7-47df-a1c3-5cb194c54f6a.jpg)
-
+![panorama_sal_full](https://user-images.githubusercontent.com/20626329/207943440-bdeb8b32-f919-496e-815b-1801fef21a47.jpg)
 
 5. Application Outputs 1:  Panorama with foreground motion trail
 
@@ -29,7 +28,7 @@ https://user-images.githubusercontent.com/20626329/207740243-4c6ee809-a124-4ce6-
 
 6. Application Outputs 2:  Panorama Video
 
-[![Panorama Video](https://img.youtube.com/vi/eDN6vLwOlA4/0.jpg)](https://www.youtube.com/watch?v=eDN6vLwOlA4)
+[![Panorama Video](https://img.youtube.com/vi/JSElgxdzX44/0.jpg)](https://www.youtube.com/watch?v=JSElgxdzX44)
 
 7. Application Outputs 3:  Panorama Video by removing one of foreground object
 
