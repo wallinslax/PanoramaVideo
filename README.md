@@ -16,8 +16,11 @@ https://user-images.githubusercontent.com/20626329/207740243-4c6ee809-a124-4ce6-
 
 2. Prcessed Foreground [middle output 1]
 
+[![extracted_foreground](https://img.youtube.com/vi/E1ky-vNfdNk/0.jpg)](https://www.youtube.com/watch?v=E1ky-vNfdNk)
 
 3. Prcessed Backgound [middle output 2]
+
+[![extracted_background](https://img.youtube.com/vi/y3mnn0xp6GE/0.jpg)](https://www.youtube.com/watch?v=y3mnn0xp6GE)
 
 4. Panorama without foregound
 
@@ -30,14 +33,11 @@ https://user-images.githubusercontent.com/20626329/207740243-4c6ee809-a124-4ce6-
 
 6. Application Outputs 2:  Panorama Video
 
-
-
-https://user-images.githubusercontent.com/20626329/207741026-7eed6994-5c4e-4e81-aa9d-1c8ec45ea3a6.mp4
-
-
+[![Panorama Video](https://img.youtube.com/vi/eDN6vLwOlA4/0.jpg)](https://www.youtube.com/watch?v=eDN6vLwOlA4)
 
 7. Application Outputs 3:  Panorama Video by removing one of foreground object
 
+[![Panorama Video without foreground](https://img.youtube.com/vi/GoLkilTI9Zg/0.jpg)](https://www.youtube.com/watch?v=GoLkilTI9Zg)
 
 
 
