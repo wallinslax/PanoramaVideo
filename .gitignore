@@ -1,8 +1,6 @@
 *gdoc
-rgb/
-*.npy
 __pycache__
 *.pyc
-*.jpg
-*.mp4
 *.zip
+demo/*
+*.jpg

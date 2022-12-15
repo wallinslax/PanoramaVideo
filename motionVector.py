@@ -10,6 +10,7 @@ from collections import defaultdict
 from ioVideo import mp4toRGB, loadRGB
 
 def getMotionVectors(inImgs, macroSize, videoName, interval_MV=1):
+    print('Calculate motion vectors. It will take several hours...')
     nFrame, height, width, _ = np.shape(inImgs) 
     motionVectors = []
     nProcess = len(inImgs)
@@ -17,6 +18,7 @@ def getMotionVectors(inImgs, macroSize, videoName, interval_MV=1):
     motionVectorsFileName = "cache/motionVectors_"+ videoName+"_"+ str(nProcess) +"_"+ str(interval_MV) +".npy"
     # motionVectorsFileName = "cache/motionVectors_SAL_437small.npy" ########
     if os.path.exists(motionVectorsFileName):
+        print('Load motion vectors from cache...')
         with open(motionVectorsFileName, 'rb') as f:
             motionVectors = np.load(f)
         return motionVectors

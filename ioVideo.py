@@ -129,10 +129,15 @@ def playVideo(frames, wait=30):
 def saveVideo(frames, filePath = 'lala.mp4'):
     # write MP4 to disk
     height, width, _ = np.shape(frames[0])
-    out = cv.VideoWriter(filePath, cv.VideoWriter_fourcc(*'MP4V'), 30.0, frameSize=(width,height))
+    # codec = cv.VideoWriter_fourcc('m', 'p', '4', 'v')
+    codec = cv.VideoWriter_fourcc(*'MP4V')
+    # codec = cv.VideoWriter_fourcc(*'avc1')
+    
+    out = cv.VideoWriter(filePath, codec, 30.05, frameSize=(width,height))
     for frame in frames:
         out.write(cv.cvtColor(frame, cv.COLOR_RGB2BGR))
     out.release()
+    cv.destroyAllWindows()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
