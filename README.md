@@ -48,7 +48,7 @@ https://user-images.githubusercontent.com/20626329/207740243-4c6ee809-a124-4ce6-
     └── README.md
 
 ### Setup
-    git clone https://github.com/wallinslax/576Fall22FinalProject.git
+    git clone https://github.com/wallinslax/PanoramaVideo.git
     pip install -r requirements.txt
 
 ### Generate the result above
