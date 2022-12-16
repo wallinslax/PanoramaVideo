@@ -1,8 +1,8 @@
 # video2Panorama
 ### Description
-In this project, we use motion vector of each macroblock to sperate foreground and background.
-The first application is composing panorama with foreground motion trail.
-The second application is producing a panorama video by apply forground on panorama.
+In this project, we use motion vector of each macroblock to sperate foreground and background. 
+The first application is composing panorama with foreground motion trail. 
+The second application is producing a panorama video by apply forground on panorama. 
 The third application is to create original video without foregound.
 
 ### Result
