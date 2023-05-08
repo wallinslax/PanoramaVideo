@@ -58,4 +58,4 @@ https://user-images.githubusercontent.com/20626329/207740243-4c6ee809-a124-4ce6-
 ### Member
 - [Chia-Hao Chang](https://www.linkedin.com/in/chia-hao-chang/)
 - [Chih-Ken Yao](https://www.linkedin.com/in/chih-ken-yao/)
-- [Sung-Fu Han](linkedin.com/in/sungfuhan/)
+- [Sung-Fu Han](https://www.linkedin.com/in/sungfuhan/)
